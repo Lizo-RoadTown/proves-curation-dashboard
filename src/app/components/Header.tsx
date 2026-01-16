@@ -1,4 +1,4 @@
-import { Bell, ChevronDown, HelpCircle } from "lucide-react";
+import { Bell, ChevronDown, HelpCircle, LogOut } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { Badge } from "@/app/components/ui/badge";
 import {
@@ -92,6 +92,10 @@ export function Header({
 
           <Button variant="ghost" size="sm">
             <HelpCircle className="h-5 w-5" />
+          </Button>
+
+          <Button variant="ghost" size="sm" onClick={onSignOut} title="Sign Out">
+            <LogOut className="h-5 w-5" />
           </Button>
 
           <DropdownMenu>
