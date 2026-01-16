@@ -17,6 +17,7 @@ interface HeaderProps {
   teams: string[];
   onTeamChange: (team: string) => void;
   onNotificationsClick: () => void;
+  onSignOut?: () => void;
 }
 
 export function Header({
@@ -27,6 +28,7 @@ export function Header({
   teams,
   onTeamChange,
   onNotificationsClick,
+  onSignOut,
 }: HeaderProps) {
   return (
     <header className="border-b bg-white px-6 py-4">
@@ -108,7 +110,7 @@ export function Header({
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Settings</DropdownMenuItem>
-              <DropdownMenuItem>Sign Out</DropdownMenuItem>
+              <DropdownMenuItem onClick={onSignOut}>Sign Out</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
