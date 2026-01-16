@@ -7,6 +7,23 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+// Agent oversight types
+export type AgentCapabilityType =
+  | 'prompt_update'
+  | 'threshold_change'
+  | 'method_improvement'
+  | 'tool_configuration'
+  | 'ontology_expansion'
+  | 'validation_rule'
+
+export type ProposalStatus =
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'auto_approved'
+  | 'implemented'
+  | 'reverted'
+
 export interface Database {
   public: {
     Tables: {
@@ -111,6 +128,90 @@ export interface Database {
           approved_count: number
           rejected_count: number
           status: 'active' | 'completed' | 'expired' | 'released'
+        }
+      }
+      agent_capabilities: {
+        Row: {
+          id: string
+          agent_name: string
+          capability_type: AgentCapabilityType
+          trust_score: number
+          total_proposals: number
+          approved_count: number
+          rejected_count: number
+          auto_approved_count: number
+          successful_implementations: number
+          failed_implementations: number
+          auto_approve_threshold: number
+          requires_review: boolean
+          description: string | null
+          created_at: string
+          updated_at: string
+        }
+        Update: {
+          trust_score?: number
+          auto_approve_threshold?: number
+          requires_review?: boolean
+          description?: string | null
+        }
+      }
+      agent_proposals: {
+        Row: {
+          id: string
+          capability_id: string
+          title: string
+          proposed_change: Json
+          rationale: string
+          predicted_impact: string | null
+          supporting_evidence: Json | null
+          affected_extraction_ids: string[] | null
+          status: ProposalStatus
+          auto_applied: boolean
+          reviewed_by: string | null
+          reviewed_at: string | null
+          review_notes: string | null
+          implemented_at: string | null
+          implementation_details: Json | null
+          actual_impact: string | null
+          success_measured: boolean
+          success_score: number | null
+          measurement_details: Json | null
+          measured_at: string | null
+          reverted_at: string | null
+          revert_reason: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          capability_id: string
+          title: string
+          proposed_change: Json
+          rationale: string
+          predicted_impact?: string | null
+          supporting_evidence?: Json | null
+          affected_extraction_ids?: string[] | null
+        }
+        Update: {
+          status?: ProposalStatus
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          review_notes?: string | null
+          implemented_at?: string | null
+          actual_impact?: string | null
+          success_measured?: boolean
+          success_score?: number | null
+        }
+      }
+      agent_trust_history: {
+        Row: {
+          id: string
+          capability_id: string
+          previous_score: number | null
+          new_score: number | null
+          change_reason: string
+          proposal_id: string | null
+          changed_by: string | null
+          created_at: string
         }
       }
     }

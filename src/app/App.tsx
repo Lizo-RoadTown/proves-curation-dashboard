@@ -6,13 +6,14 @@ import { ExtractionDetail } from "./components/ExtractionDetail";
 import { ActivityHistory } from "./components/ActivityHistory";
 import { Library } from "./components/Library";
 import { Settings } from "./components/Settings";
+import { AgentOversight } from "./components/AgentOversight";
 import { Header } from "./components/Header";
 import { Navigation } from "./components/Navigation";
 import { LoginPage } from "./components/auth/LoginPage";
 import { SignupPage } from "./components/auth/SignupPage";
 import { Loader2 } from "lucide-react";
 
-type View = "dashboard" | "pending" | "detail" | "activity" | "library" | "settings";
+type View = "dashboard" | "pending" | "detail" | "activity" | "library" | "oversight" | "settings";
 type AuthView = "login" | "signup";
 
 export default function App() {
@@ -103,6 +104,7 @@ export default function App() {
           )}
           {currentView === "activity" && <ActivityHistory />}
           {currentView === "library" && <Library />}
+          {currentView === "oversight" && <AgentOversight />}
           {currentView === "settings" && <Settings />}
         </main>
       </div>
