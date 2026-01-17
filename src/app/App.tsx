@@ -1,31 +1,29 @@
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { Dashboard } from "./components/Dashboard";
-import { PendingExtractions } from "./components/PendingExtractions";
-import { ExtractionDetail } from "./components/ExtractionDetail";
-import { ActivityHistory } from "./components/ActivityHistory";
-import { Library } from "./components/Library";
-import { Settings } from "./components/Settings";
-import { AgentOversight } from "./components/AgentOversight";
-import { PeerReflection } from "./components/PeerReflection";
 import { Header } from "./components/Header";
 import { Navigation } from "./components/Navigation";
 import { LoginPage } from "./components/auth/LoginPage";
 import { SignupPage } from "./components/auth/SignupPage";
 import { Loader2 } from "lucide-react";
 
-type View = "dashboard" | "pending" | "detail" | "activity" | "library" | "oversight" | "reflection" | "settings";
+// New 3-surface architecture
+import { AskView, LibraryView, AdminView } from "./surfaces";
+
+// Surface type - brutally simple: Ask, Library, Admin
+type Surface = "ask" | "library" | "admin";
 type AuthView = "login" | "signup";
+
+// DEV MODE: Skip auth for local development
+const DEV_SKIP_AUTH = import.meta.env.DEV;
 
 export default function App() {
   const { user, loading, signOut } = useAuth();
-  const [currentView, setCurrentView] = useState<View>("pending");
+  const [currentSurface, setCurrentSurface] = useState<Surface>("ask");
   const [authView, setAuthView] = useState<AuthView>("login");
-  const [selectedExtractionId, setSelectedExtractionId] = useState<string | null>(null);
   const [currentTeam, setCurrentTeam] = useState("PROVES Lab");
 
-  // Show loading spinner while checking auth state
-  if (loading) {
+  // Show loading spinner while checking auth state (skip in dev mode)
+  if (loading && !DEV_SKIP_AUTH) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -36,22 +34,22 @@ export default function App() {
     );
   }
 
-  // Show login/signup if not authenticated
-  if (!user) {
+  // Show login/signup if not authenticated (skip in dev mode)
+  if (!user && !DEV_SKIP_AUTH) {
     if (authView === "signup") {
       return <SignupPage onSwitchToLogin={() => setAuthView("login")} />;
     }
     return <LoginPage onSwitchToSignup={() => setAuthView("signup")} />;
   }
 
-  // User is authenticated - show main app
+  // User is authenticated (or dev mode) - show main app
   const teams = ["PROVES Lab", "CubeSat Team", "Research Group"]; // TODO: Fetch from team_members
-  const userName = user.user_metadata?.full_name || user.email?.split('@')[0] || "User";
-  const userRole = "Reviewer"; // TODO: Fetch from team_members
+  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || "Dev User";
+  const userRole = "lead"; // TODO: Fetch from user_roles table (lead = can see Admin)
   const pendingCount = 0; // TODO: Fetch from Supabase
 
-  const handleNavigate = (view: string) => {
-    setCurrentView(view as View);
+  const handleNavigate = (surface: string) => {
+    setCurrentSurface(surface as Surface);
   };
 
   const handleTeamChange = (team: string) => {
@@ -60,16 +58,6 @@ export default function App() {
 
   const handleNotificationsClick = () => {
     console.log("Notifications clicked");
-  };
-
-  const handleViewDetail = (id: string) => {
-    setSelectedExtractionId(id);
-    setCurrentView("detail");
-  };
-
-  const handleBackFromDetail = () => {
-    setSelectedExtractionId(null);
-    setCurrentView("pending");
   };
 
   const handleSignOut = async () => {
@@ -89,25 +77,15 @@ export default function App() {
         onSignOut={handleSignOut}
       />
       <div className="flex">
-        <Navigation currentView={currentView} onNavigate={handleNavigate} />
-        <main className="flex-1">
-          {currentView === "dashboard" && (
-            <Dashboard onNavigate={handleNavigate} />
-          )}
-          {currentView === "pending" && (
-            <PendingExtractions onViewDetail={handleViewDetail} />
-          )}
-          {currentView === "detail" && selectedExtractionId && (
-            <ExtractionDetail
-              extractionId={selectedExtractionId}
-              onBack={handleBackFromDetail}
-            />
-          )}
-          {currentView === "activity" && <ActivityHistory />}
-          {currentView === "library" && <Library />}
-          {currentView === "oversight" && <AgentOversight />}
-          {currentView === "reflection" && <PeerReflection />}
-          {currentView === "settings" && <Settings />}
+        <Navigation
+          currentView={currentSurface}
+          onNavigate={handleNavigate}
+          userRole={userRole}
+        />
+        <main className="flex-1 overflow-hidden">
+          {currentSurface === "ask" && <AskView />}
+          {currentSurface === "library" && <LibraryView />}
+          {currentSurface === "admin" && <AdminView />}
         </main>
       </div>
     </div>

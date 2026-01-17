@@ -7,6 +7,29 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+// Re-export review types for convenience
+export type {
+  RejectionCategory,
+  RejectionFamily,
+  ReviewExtractionDTO,
+  ReviewEvidence,
+  ReviewLineage,
+  ReviewSnapshot,
+  ReviewConfidence,
+  ReviewLatestDecision,
+  RecordReviewDecisionParams,
+  RecordReviewEditParams,
+  ReviewFormState,
+  PayloadDiff,
+} from './review'
+
+export {
+  REJECTION_FAMILIES,
+  REJECTION_LABELS,
+  REJECTION_GROUPS,
+  computePayloadDiff,
+} from './review'
+
 // Agent oversight types
 export type AgentCapabilityType =
   | 'prompt_update'
@@ -232,6 +255,23 @@ export interface Database {
           last_action_time: string | null
         }
       }
+      review_queue_view: {
+        Row: {
+          extraction_id: string
+          candidate_type: string
+          candidate_key: string
+          ecosystem: string | null
+          status: string
+          created_at: string
+          candidate_payload: Json
+          evidence: Json
+          lineage: Json
+          snapshot: Json
+          confidence: Json
+          latest_decision: Json | null
+          edit_count: number
+        }
+      }
     }
     Functions: {
       record_human_decision: {
@@ -243,6 +283,31 @@ export interface Database {
           p_before_payload?: Json
           p_after_payload?: Json
           p_webhook_source?: string
+        }
+        Returns: string
+      }
+      record_review_decision: {
+        Args: {
+          p_extraction_id: string
+          p_decision: string
+          p_reviewer_id: string
+          p_rejection_category?: string
+          p_decision_reason?: string
+          p_human_confidence_override?: number
+          p_confidence_override_reason?: string
+          p_source_flagged?: boolean
+          p_source_flag_reason?: string
+        }
+        Returns: string
+      }
+      record_review_edit: {
+        Args: {
+          p_extraction_id: string
+          p_reviewer_id: string
+          p_before_payload: Json
+          p_after_payload: Json
+          p_edit_reason?: string
+          p_apply_to_extraction?: boolean
         }
         Returns: string
       }

@@ -1,42 +1,81 @@
-import { Home, FileText, BookOpen, Activity, Settings, Shield, Users } from "lucide-react";
+import { MessageSquare, BookOpen, Settings } from "lucide-react";
 
 interface NavigationProps {
   currentView: string;
   onNavigate: (view: string) => void;
+  userRole?: string;
 }
 
-export function Navigation({ currentView, onNavigate }: NavigationProps) {
+// Role hierarchy for access control
+const roleHierarchy: Record<string, number> = {
+  user: 1,
+  reviewer: 2,
+  lead: 3,
+  admin: 4,
+};
+
+export function Navigation({ currentView, onNavigate, userRole = "lead" }: NavigationProps) {
+  // 3-surface navigation - brutally simple
   const navItems = [
-    { id: "dashboard", label: "Home", icon: Home, description: "Overview and metrics" },
-    { id: "pending", label: "Review Work", icon: FileText, description: "Pending extractions to review" },
-    { id: "library", label: "Library", icon: BookOpen, description: "Verified knowledge" },
-    { id: "activity", label: "Activity", icon: Activity, description: "Review history and audit trail" },
-    { id: "oversight", label: "Agent Oversight", icon: Shield, description: "Trust calibration and approvals" },
-    { id: "reflection", label: "Peer Reflection", icon: Users, description: "Read-only quality analysis" },
-    { id: "settings", label: "Settings", icon: Settings, description: "Team and personal settings" },
+    {
+      id: "ask",
+      label: "Ask",
+      icon: MessageSquare,
+      description: "Chat with the library",
+      minRole: "user",
+    },
+    {
+      id: "library",
+      label: "Library",
+      icon: BookOpen,
+      description: "Search + explore",
+      minRole: "user",
+    },
+    {
+      id: "admin",
+      label: "Admin",
+      icon: Settings,
+      description: "Manage sources",
+      minRole: "lead", // Only lead+ can see Admin
+    },
   ];
 
+  // Filter nav items based on user role
+  const userRoleLevel = roleHierarchy[userRole] || 1;
+  const visibleItems = navItems.filter(
+    (item) => userRoleLevel >= roleHierarchy[item.minRole]
+  );
+
   return (
-    <nav className="w-64 border-r bg-gray-50 p-4">
+    <nav className="w-64 border-r bg-white p-4 flex flex-col h-[calc(100vh-64px)]">
+      {/* Main Navigation */}
       <div className="space-y-1">
-        {navItems.map((item) => {
+        {visibleItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentView === item.id;
-          
+
           return (
             <button
               key={item.id}
               onClick={() => onNavigate(item.id)}
-              className={`w-full flex items-start gap-3 px-3 py-2 rounded-lg transition-colors ${
+              className={`w-full flex items-start gap-3 px-4 py-3 rounded-xl transition-all ${
                 isActive
-                  ? "bg-blue-600 text-white"
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
                   : "text-gray-700 hover:bg-gray-100"
               }`}
             >
-              <Icon className={`h-5 w-5 mt-0.5 flex-shrink-0 ${isActive ? "text-white" : "text-gray-500"}`} />
+              <Icon
+                className={`h-5 w-5 mt-0.5 flex-shrink-0 ${
+                  isActive ? "text-white" : "text-gray-500"
+                }`}
+              />
               <div className="flex flex-col items-start text-left">
-                <span className="font-medium">{item.label}</span>
-                <span className={`text-xs ${isActive ? "text-blue-100" : "text-gray-500"}`}>
+                <span className="font-semibold">{item.label}</span>
+                <span
+                  className={`text-xs ${
+                    isActive ? "text-blue-100" : "text-gray-500"
+                  }`}
+                >
                   {item.description}
                 </span>
               </div>
@@ -45,18 +84,25 @@ export function Navigation({ currentView, onNavigate }: NavigationProps) {
         })}
       </div>
 
-      <div className="mt-8 p-3 bg-blue-50 rounded-lg border border-blue-200">
-        <div className="flex items-start gap-2">
-          <div className="h-5 w-5 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-xs">?</span>
+      {/* Spacer */}
+      <div className="flex-1" />
+
+      {/* Help Section */}
+      <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+        <div className="flex items-start gap-3">
+          <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+            <span className="text-white text-sm font-bold">?</span>
           </div>
           <div>
-            <div className="text-sm font-medium text-gray-900">Need Help?</div>
+            <div className="text-sm font-semibold text-gray-900">Need Help?</div>
             <p className="text-xs text-gray-600 mt-1">
-              Access the glossary or contextual help anytime
+              Ask questions naturally - the agent will find answers
             </p>
-            <button className="text-xs text-blue-600 hover:underline mt-2">
-              Open Help Center
+            <button
+              onClick={() => onNavigate("ask")}
+              className="text-xs text-blue-600 font-medium hover:underline mt-2 inline-block"
+            >
+              Go to Ask →
             </button>
           </div>
         </div>

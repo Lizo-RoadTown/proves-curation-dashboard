@@ -1,0 +1,303 @@
+import { useState } from "react";
+import { Database, RefreshCw, BarChart3, Shield, Plus, ExternalLink, AlertCircle, CheckCircle, Clock } from "lucide-react";
+
+type AdminSection = "sources" | "ingestion" | "health" | "policy";
+
+interface Source {
+  id: string;
+  name: string;
+  type: "github_org" | "notion_workspace" | "gdrive_folder" | "discord_server";
+  status: "active" | "error" | "syncing";
+  lastSync: string;
+  itemCount: number;
+}
+
+const mockSources: Source[] = [
+  { id: "1", name: "PROVES/PROVESKit", type: "github_org", status: "active", lastSync: "2 hours ago", itemCount: 234 },
+  { id: "2", name: "Team Wiki", type: "notion_workspace", status: "active", lastSync: "1 day ago", itemCount: 89 },
+  { id: "3", name: "Project Docs", type: "gdrive_folder", status: "error", lastSync: "3 days ago", itemCount: 45 },
+  { id: "4", name: "#engineering", type: "discord_server", status: "syncing", lastSync: "syncing...", itemCount: 1203 },
+];
+
+export function AdminView() {
+  const [activeSection, setActiveSection] = useState<AdminSection>("sources");
+
+  const sections = [
+    { id: "sources" as const, label: "Sources", icon: Database, description: "Connected repos, drives, discord" },
+    { id: "ingestion" as const, label: "Ingestion", icon: RefreshCw, description: "Crawl status, refresh cadence" },
+    { id: "health" as const, label: "Index Health", icon: BarChart3, description: "Coverage, drift, duplicates" },
+    { id: "policy" as const, label: "Policy", icon: Shield, description: "Approval rules, permissions" },
+  ];
+
+  const getStatusIcon = (status: Source["status"]) => {
+    switch (status) {
+      case "active":
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case "error":
+        return <AlertCircle className="w-4 h-4 text-red-500" />;
+      case "syncing":
+        return <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />;
+    }
+  };
+
+  const getTypeLabel = (type: Source["type"]) => {
+    switch (type) {
+      case "github_org":
+        return "GitHub";
+      case "notion_workspace":
+        return "Notion";
+      case "gdrive_folder":
+        return "Google Drive";
+      case "discord_server":
+        return "Discord";
+    }
+  };
+
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold text-gray-900 mb-2">Admin</h1>
+      <p className="text-gray-600 mb-6">
+        Manage collective knowledge sources and ingestion
+      </p>
+
+      {/* Section Tabs */}
+      <div className="flex gap-2 mb-6 border-b border-gray-200">
+        {sections.map((section) => {
+          const Icon = section.icon;
+          const isActive = activeSection === section.id;
+          return (
+            <button
+              key={section.id}
+              onClick={() => setActiveSection(section.id)}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                isActive
+                  ? "text-blue-600 border-blue-600"
+                  : "text-gray-600 border-transparent hover:text-gray-900"
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {section.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Section Content */}
+      {activeSection === "sources" && (
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Connected Sources</h2>
+            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
+              <Plus className="w-4 h-4" />
+              Add Source
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {mockSources.map((source) => (
+              <div
+                key={source.id}
+                className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg"
+              >
+                <div className="flex items-center gap-4">
+                  {getStatusIcon(source.status)}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium text-gray-900">{source.name}</h3>
+                      <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
+                        {getTypeLabel(source.type)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500">
+                      {source.itemCount} items · Last sync: {source.lastSync}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
+                  <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+                    <ExternalLink className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeSection === "ingestion" && (
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Ingestion Queue</h2>
+
+          {/* Stats */}
+          <div className="grid grid-cols-4 gap-4 mb-6">
+            <div className="p-4 bg-white border border-gray-200 rounded-lg">
+              <p className="text-sm text-gray-500">Pending</p>
+              <p className="text-2xl font-bold text-gray-900">24</p>
+            </div>
+            <div className="p-4 bg-white border border-gray-200 rounded-lg">
+              <p className="text-sm text-gray-500">Processing</p>
+              <p className="text-2xl font-bold text-blue-600">3</p>
+            </div>
+            <div className="p-4 bg-white border border-gray-200 rounded-lg">
+              <p className="text-sm text-gray-500">Completed Today</p>
+              <p className="text-2xl font-bold text-green-600">47</p>
+            </div>
+            <div className="p-4 bg-white border border-gray-200 rounded-lg">
+              <p className="text-sm text-gray-500">Failed</p>
+              <p className="text-2xl font-bold text-red-600">2</p>
+            </div>
+          </div>
+
+          {/* Recent Activity */}
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">Recent Activity</h3>
+          <div className="space-y-2">
+            {[
+              { url: "docs.proveskit.space/components/gps", status: "completed", time: "2 min ago" },
+              { url: "github.com/PROVES/software/README.md", status: "processing", time: "now" },
+              { url: "notion.so/Team-Wiki/Architecture", status: "pending", time: "queued" },
+              { url: "drive.google.com/docs/ICD-v2", status: "failed", time: "5 min ago" },
+            ].map((item, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm"
+              >
+                <span className="text-gray-700 font-mono">{item.url}</span>
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`px-2 py-0.5 rounded text-xs ${
+                      item.status === "completed"
+                        ? "bg-green-100 text-green-700"
+                        : item.status === "processing"
+                        ? "bg-blue-100 text-blue-700"
+                        : item.status === "failed"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {item.status}
+                  </span>
+                  <span className="text-gray-400">{item.time}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeSection === "health" && (
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Index Health</h2>
+
+          {/* Coverage by Domain */}
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Coverage by Domain</h3>
+            <div className="grid grid-cols-4 gap-4">
+              {[
+                { domain: "Ops", coverage: 85, color: "bg-green-500" },
+                { domain: "Software", coverage: 72, color: "bg-blue-500" },
+                { domain: "Hardware", coverage: 45, color: "bg-yellow-500" },
+                { domain: "Process", coverage: 60, color: "bg-purple-500" },
+              ].map((item) => (
+                <div key={item.domain} className="p-4 bg-white border border-gray-200 rounded-lg">
+                  <p className="text-sm text-gray-500">{item.domain}</p>
+                  <p className="text-2xl font-bold text-gray-900">{item.coverage}%</p>
+                  <div className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${item.color} rounded-full`}
+                      style={{ width: `${item.coverage}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Issues */}
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">Issues to Address</h3>
+          <div className="space-y-2">
+            <div className="flex items-center gap-3 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <AlertCircle className="w-5 h-5 text-yellow-600" />
+              <div>
+                <p className="text-sm font-medium text-yellow-800">12 potential duplicates detected</p>
+                <p className="text-xs text-yellow-600">Components with similar names from different sources</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
+              <Clock className="w-5 h-5 text-red-600" />
+              <div>
+                <p className="text-sm font-medium text-red-800">5 stale entries (&gt;30 days)</p>
+                <p className="text-xs text-red-600">Knowledge that may need refresh</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeSection === "policy" && (
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Ingestion Policy</h2>
+
+          <div className="space-y-4">
+            <div className="p-4 bg-white border border-gray-200 rounded-lg">
+              <h3 className="font-medium text-gray-900 mb-2">Auto-Approval Rules</h3>
+              <div className="space-y-2">
+                <label className="flex items-center gap-3">
+                  <input type="checkbox" defaultChecked className="rounded border-gray-300" />
+                  <span className="text-sm text-gray-700">
+                    Auto-approve extractions with confidence &gt; 0.9
+                  </span>
+                </label>
+                <label className="flex items-center gap-3">
+                  <input type="checkbox" defaultChecked className="rounded border-gray-300" />
+                  <span className="text-sm text-gray-700">
+                    Auto-approve from verified sources (F' docs, PROVES Kit)
+                  </span>
+                </label>
+                <label className="flex items-center gap-3">
+                  <input type="checkbox" className="rounded border-gray-300" />
+                  <span className="text-sm text-gray-700">
+                    Auto-approve duplicate matches
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div className="p-4 bg-white border border-gray-200 rounded-lg">
+              <h3 className="font-medium text-gray-900 mb-2">Blocked Content</h3>
+              <textarea
+                placeholder="Enter patterns to block (one per line)"
+                className="w-full h-24 px-3 py-2 text-sm border border-gray-200 rounded-lg"
+                defaultValue="**/node_modules/**\n**/build/**\n**/.git/**"
+              />
+            </div>
+
+            <div className="p-4 bg-white border border-gray-200 rounded-lg">
+              <h3 className="font-medium text-gray-900 mb-2">Refresh Cadence</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-500 block mb-1">Documentation</label>
+                  <select className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg">
+                    <option>Daily</option>
+                    <option>Weekly</option>
+                    <option>Manual only</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-500 block mb-1">Discord/Chat</label>
+                  <select className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg">
+                    <option>Real-time</option>
+                    <option>Hourly</option>
+                    <option>Daily</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
