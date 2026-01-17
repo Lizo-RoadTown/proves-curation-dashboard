@@ -1,380 +1,243 @@
-import { useState } from "react";
-import { Send, Paperclip, ChevronDown, Check } from "lucide-react";
+/**
+ * AskView - Main Ask surface with 3-region layout
+ *
+ * Layout:
+ * - Left: ScopeChips (search scope toggles and filters)
+ * - Center: ChatPane (agent conversation)
+ * - Right: NotebookPanel (attachments and collective overview)
+ */
 
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  evidence?: {
-    collective: number;
-    notebook: number;
-    confidence: "high" | "medium" | "low";
-    freshnessLabel: string;
-  };
-}
+import { useState, useCallback } from "react";
+import { ScopeChips } from "./ScopeChips";
+import { ChatPane, type ChatMessage } from "./ChatPane";
+import { NotebookPanel, type Attachment } from "./NotebookPanel";
+import type { EvidenceData } from "./EvidenceStrip";
 
 export function AskView() {
-  const [messages, setMessages] = useState<Message[]>([
+  // Chat state
+  const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome",
       role: "assistant",
-      content: "Hi! I can help you find information from the collective library and your attached files. What would you like to know?",
+      content:
+        "Hi! I can help you find information from the collective library and your attached files. Ask me about PROVES, F' components, procedures, or any technical topic.",
+      timestamp: new Date(),
     },
   ]);
-  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Scope state
   const [scopeCollective, setScopeCollective] = useState(true);
   const [scopeNotebook, setScopeNotebook] = useState(true);
   const [missionFilter, setMissionFilter] = useState("all");
   const [domainFilter, setDomainFilter] = useState("all");
-  const [notebookTab, setNotebookTab] = useState<"my" | "collective">("my");
-  const [attachments, setAttachments] = useState<string[]>([]);
+  const [timeFilter, setTimeFilter] = useState("latest");
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  // Notebook state
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [recentAttachments] = useState<Attachment[]>([
+    // Mock recent attachments - will come from user_attachments table
+    { id: "recent-1", name: "PROVES-2 Software", type: "repo", addedAt: new Date() },
+    { id: "recent-2", name: "Flight Procedures", type: "folder", addedAt: new Date() },
+  ]);
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: input,
-    };
+  /**
+   * Handle sending a message
+   * TODO: Integrate with MCP server for actual agent responses
+   */
+  const handleSendMessage = useCallback(
+    async (content: string) => {
+      // Add user message
+      const userMessage: ChatMessage = {
+        id: `user-${Date.now()}`,
+        role: "user",
+        content,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, userMessage]);
+      setIsLoading(true);
 
-    // Mock response - will be replaced with MCP integration
-    const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      role: "assistant",
-      content: `I found relevant information about "${input}". This is a placeholder response that will be connected to the MCP server.`,
-      evidence: {
-        collective: 5,
-        notebook: attachments.length > 0 ? 2 : 0,
-        confidence: "high",
+      // Simulate API delay
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      // Create mock evidence based on scope
+      const evidence: EvidenceData = {
+        collectiveCount: scopeCollective ? Math.floor(Math.random() * 8) + 2 : 0,
+        notebookCount: scopeNotebook && attachments.length > 0 ? Math.floor(Math.random() * 3) + 1 : 0,
+        confidence: Math.random() > 0.3 ? "high" : Math.random() > 0.5 ? "medium" : "low",
         freshnessLabel: "2 days ago",
-      },
-    };
+        sources: [
+          // Mock sources - will come from actual search results
+          ...(scopeCollective
+            ? [
+                {
+                  id: "src-1",
+                  type: "collective" as const,
+                  title: "F' Component Model Documentation",
+                  sourceUrl: "https://nasa.github.io/fprime/",
+                  sourceType: "documentation",
+                  excerpt: `Relevant section about ${content.slice(0, 30)}...`,
+                  capturedAt: "Jan 15, 2026",
+                },
+                {
+                  id: "src-2",
+                  type: "collective" as const,
+                  title: "PROVES Kit Integration Guide",
+                  sourceType: "guide",
+                  excerpt: "Hardware integration patterns and best practices...",
+                  capturedAt: "Jan 10, 2026",
+                },
+              ]
+            : []),
+          ...(scopeNotebook && attachments.length > 0
+            ? [
+                {
+                  id: "src-3",
+                  type: "notebook" as const,
+                  title: attachments[0]?.name || "Attached file",
+                  sourceType: "local file",
+                  excerpt: "Found in your attached files...",
+                },
+              ]
+            : []),
+        ],
+      };
 
-    setMessages([...messages, userMessage, assistantMessage]);
-    setInput("");
-  };
+      // Add assistant response
+      const assistantMessage: ChatMessage = {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        content: generateMockResponse(content, scopeCollective, scopeNotebook),
+        timestamp: new Date(),
+        evidence,
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
+      setIsLoading(false);
+    },
+    [scopeCollective, scopeNotebook, attachments]
+  );
+
+  /**
+   * Handle adding an attachment
+   * TODO: Open attachment picker dialog
+   */
+  const handleAddAttachment = useCallback(() => {
+    // For now, add a mock attachment
+    const mockAttachment: Attachment = {
+      id: `att-${Date.now()}`,
+      name: `Project Folder ${attachments.length + 1}`,
+      type: "folder",
+      path: "/path/to/folder",
+      addedAt: new Date(),
+    };
+    setAttachments((prev) => [...prev, mockAttachment]);
+  }, [attachments.length]);
+
+  /**
+   * Handle removing an attachment
+   */
+  const handleRemoveAttachment = useCallback((id: string) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+  }, []);
 
   return (
     <div className="flex h-[calc(100vh-64px)]">
       {/* Left: Scope Chips */}
-      <div className="w-56 border-r bg-gray-50 p-4 flex-shrink-0">
-        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-          Search Scope
-        </h3>
-
-        {/* Scope toggles */}
-        <div className="space-y-2 mb-6">
-          <button
-            onClick={() => setScopeCollective(!scopeCollective)}
-            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              scopeCollective
-                ? "bg-blue-100 text-blue-700 border border-blue-200"
-                : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
-            }`}
-          >
-            <div
-              className={`w-4 h-4 rounded flex items-center justify-center ${
-                scopeCollective ? "bg-blue-600" : "bg-white border border-gray-300"
-              }`}
-            >
-              {scopeCollective && <Check className="w-3 h-3 text-white" />}
-            </div>
-            Collective
-          </button>
-
-          <button
-            onClick={() => setScopeNotebook(!scopeNotebook)}
-            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              scopeNotebook
-                ? "bg-green-100 text-green-700 border border-green-200"
-                : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
-            }`}
-          >
-            <div
-              className={`w-4 h-4 rounded flex items-center justify-center ${
-                scopeNotebook ? "bg-green-600" : "bg-white border border-gray-300"
-              }`}
-            >
-              {scopeNotebook && <Check className="w-3 h-3 text-white" />}
-            </div>
-            My Notebook
-          </button>
-        </div>
-
-        {/* Filters */}
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs font-medium text-gray-500 block mb-1">
-              Mission
-            </label>
-            <select
-              value={missionFilter}
-              onChange={(e) => setMissionFilter(e.target.value)}
-              className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white"
-            >
-              <option value="all">All</option>
-              <option value="proves1">PROVES-1</option>
-              <option value="proves2">PROVES-2</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium text-gray-500 block mb-1">
-              Domain
-            </label>
-            <select
-              value={domainFilter}
-              onChange={(e) => setDomainFilter(e.target.value)}
-              className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white"
-            >
-              <option value="all">All</option>
-              <option value="ops">Ops</option>
-              <option value="software">Software</option>
-              <option value="hardware">Hardware</option>
-              <option value="process">Process</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium text-gray-500 block mb-1">
-              Time
-            </label>
-            <select
-              className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white"
-            >
-              <option value="latest">Latest</option>
-              <option value="week">Past Week</option>
-              <option value="month">Past Month</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      <ScopeChips
+        scopeCollective={scopeCollective}
+        setScopeCollective={setScopeCollective}
+        scopeNotebook={scopeNotebook}
+        setScopeNotebook={setScopeNotebook}
+        missionFilter={missionFilter}
+        setMissionFilter={setMissionFilter}
+        domainFilter={domainFilter}
+        setDomainFilter={setDomainFilter}
+        timeFilter={timeFilter}
+        setTimeFilter={setTimeFilter}
+      />
 
       {/* Center: Chat */}
-      <div className="flex-1 flex flex-col">
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-2xl rounded-2xl px-4 py-3 ${
-                  message.role === "user"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white border border-gray-200"
-                }`}
-              >
-                <p className="text-sm">{message.content}</p>
-
-                {/* Evidence Strip */}
-                {message.evidence && (
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <div className="text-xs text-gray-500 space-y-1">
-                      <div className="font-medium text-gray-700">Used for this answer:</div>
-                      <div className="flex gap-4">
-                        <span>Collective: {message.evidence.collective} items</span>
-                        <span>Notebook: {message.evidence.notebook} files</span>
-                      </div>
-                      <div className="flex gap-4">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs ${
-                            message.evidence.confidence === "high"
-                              ? "bg-green-100 text-green-700"
-                              : message.evidence.confidence === "medium"
-                              ? "bg-yellow-100 text-yellow-700"
-                              : "bg-red-100 text-red-700"
-                          }`}
-                        >
-                          {message.evidence.confidence} confidence
-                        </span>
-                        <span>{message.evidence.freshnessLabel}</span>
-                      </div>
-                      <button className="text-blue-600 hover:underline mt-1">
-                        Show sources
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Input */}
-        <div className="border-t bg-white p-4">
-          <div className="max-w-3xl mx-auto">
-            <div className="flex items-end gap-3">
-              <div className="flex-1 relative">
-                <textarea
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend();
-                    }
-                  }}
-                  placeholder="Ask about PROVES, F', components, procedures..."
-                  className="w-full px-4 py-3 pr-12 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  rows={1}
-                />
-                <button
-                  onClick={handleSend}
-                  disabled={!input.trim()}
-                  className="absolute right-2 bottom-2 p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
-              <span>Searching:</span>
-              {scopeCollective && (
-                <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded">
-                  Collective
-                </span>
-              )}
-              {scopeNotebook && (
-                <span className="px-2 py-0.5 bg-green-50 text-green-600 rounded">
-                  Notebook ({attachments.length} attached)
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      <ChatPane
+        messages={messages}
+        onSendMessage={handleSendMessage}
+        isLoading={isLoading}
+        scopeCollective={scopeCollective}
+        scopeNotebook={scopeNotebook}
+        attachmentCount={attachments.length}
+      />
 
       {/* Right: Notebook Panel */}
-      <div className="w-72 border-l bg-gray-50 flex flex-col flex-shrink-0">
-        {/* Tabs */}
-        <div className="flex border-b">
-          <button
-            onClick={() => setNotebookTab("my")}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-              notebookTab === "my"
-                ? "text-blue-600 border-b-2 border-blue-600 bg-white"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            My Notebook
-          </button>
-          <button
-            onClick={() => setNotebookTab("collective")}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-              notebookTab === "collective"
-                ? "text-blue-600 border-b-2 border-blue-600 bg-white"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            Collective
-          </button>
-        </div>
-
-        {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {notebookTab === "my" ? (
-            <div className="space-y-4">
-              <button className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors">
-                <Paperclip className="w-4 h-4" />
-                Attach repo, folder, or doc
-              </button>
-
-              {attachments.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-sm text-gray-500">
-                    No files attached to this conversation
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Attach files to include them in your search
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase">
-                    This Conversation
-                  </h4>
-                  {attachments.map((att, i) => (
-                    <div
-                      key={i}
-                      className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm"
-                    >
-                      {att}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="pt-4 border-t">
-                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">
-                  Recent Attachments
-                </h4>
-                <p className="text-xs text-gray-400">
-                  Your recently used files will appear here
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="relative">
-                <input
-                  type="search"
-                  placeholder="Search collective..."
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg"
-                />
-              </div>
-
-              <div>
-                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">
-                  Top Sources Used Recently
-                </h4>
-                <div className="space-y-2">
-                  <div className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm">
-                    F' Component Model
-                  </div>
-                  <div className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm">
-                    PROVES Kit Docs
-                  </div>
-                  <div className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm">
-                    I2C Bus Architecture
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">
-                  Coverage
-                </h4>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="px-2 py-1 bg-green-50 text-green-700 rounded">
-                    Ops: 85%
-                  </div>
-                  <div className="px-2 py-1 bg-blue-50 text-blue-700 rounded">
-                    Software: 72%
-                  </div>
-                  <div className="px-2 py-1 bg-yellow-50 text-yellow-700 rounded">
-                    Hardware: 45%
-                  </div>
-                  <div className="px-2 py-1 bg-gray-50 text-gray-700 rounded">
-                    Process: 60%
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">
-                  What's New
-                </h4>
-                <p className="text-xs text-gray-500">
-                  12 new items added this week
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      <NotebookPanel
+        attachments={attachments}
+        onAddAttachment={handleAddAttachment}
+        onRemoveAttachment={handleRemoveAttachment}
+        recentAttachments={recentAttachments}
+      />
     </div>
   );
+}
+
+/**
+ * Generate a mock response based on the query
+ * This will be replaced with actual MCP server integration
+ */
+function generateMockResponse(
+  query: string,
+  includeCollective: boolean,
+  includeNotebook: boolean
+): string {
+  const queryLower = query.toLowerCase();
+
+  // Context-aware mock responses
+  if (queryLower.includes("gps") || queryLower.includes("component")) {
+    return `Based on the F' Component Model documentation, GPS components in PROVES follow a standard pattern:
+
+1. **Component Definition**: GPS components inherit from PassiveComponentBase
+2. **Ports**: Typically include SerialRead, SerialWrite, and TimeGet ports
+3. **Commands**: Standard commands include GPS_CONFIG and GPS_STATUS
+
+${includeCollective ? "I found 5 relevant items in the collective library covering GPS integration patterns." : ""}
+${includeNotebook ? "\nI also checked your attached files for project-specific GPS configurations." : ""}
+
+Would you like more details about any specific aspect?`;
+  }
+
+  if (queryLower.includes("procedure") || queryLower.includes("deploy")) {
+    return `Here's what I found about deployment procedures:
+
+**Pre-deployment Checklist:**
+- Verify flight software version
+- Confirm ground station connectivity
+- Run power system diagnostics
+
+**Deployment Sequence:**
+1. Initialize communication links
+2. Deploy solar panels (T+30s)
+3. Activate attitude control (T+60s)
+
+${includeCollective ? "These procedures are documented in the Ops runbook collection." : ""}`;
+  }
+
+  if (queryLower.includes("i2c") || queryLower.includes("bus")) {
+    return `The I2C bus architecture in PROVES uses:
+
+- **Main Bus**: 400kHz for sensor communication
+- **Secondary Bus**: 100kHz for legacy devices
+- **Address Space**: 0x10-0x7E reserved for flight hardware
+
+Key components on the bus include GPS, IMU, and power management ICs.`;
+  }
+
+  // Default response
+  return `I searched ${includeCollective ? "the collective library" : ""}${includeCollective && includeNotebook ? " and " : ""}${includeNotebook ? "your attached files" : ""} for information about "${query}".
+
+Here's what I found:
+
+This is a placeholder response. When connected to the MCP server, I'll provide actual search results from your knowledge base.
+
+You can:
+- Refine your question for more specific results
+- Adjust the scope filters on the left
+- Attach relevant files for project-specific context`;
 }
