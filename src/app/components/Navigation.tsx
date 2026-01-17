@@ -1,4 +1,4 @@
-import { Home, FileText, BookOpen, Activity, Settings, Shield } from "lucide-react";
+import { Home, FileText, BookOpen, Activity, Settings, Shield, Users } from "lucide-react";
 
 interface NavigationProps {
   currentView: string;
@@ -12,6 +12,7 @@ export function Navigation({ currentView, onNavigate }: NavigationProps) {
     { id: "library", label: "Library", icon: BookOpen, description: "Verified knowledge" },
     { id: "activity", label: "Activity", icon: Activity, description: "Review history and audit trail" },
     { id: "oversight", label: "Agent Oversight", icon: Shield, description: "Trust calibration and approvals" },
+    { id: "reflection", label: "Peer Reflection", icon: Users, description: "Read-only quality analysis" },
     { id: "settings", label: "Settings", icon: Settings, description: "Team and personal settings" },
   ];
 
