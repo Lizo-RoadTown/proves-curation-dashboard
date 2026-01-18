@@ -12,74 +12,64 @@ import {
   FileCheck,
   ArrowRight,
   Filter,
+  HelpCircle,
+  Building2,
+  Home,
 } from "lucide-react";
 import { useReviewExtractions } from "@/hooks/useReviewExtractions";
+import { useSources } from "@/hooks/useSources";
 import { ExtractionDetail } from "@/app/components/ExtractionDetail";
-import type { ReviewExtractionDTO } from "@/types/review";
+import { EngineerReview } from "@/app/components/EngineerReview";
+import { CouplingCard, CouplingCardCompact } from "@/app/components/CouplingCard";
+import { SourcesSection } from "./SourcesSection";
+import { IngestionSection } from "./IngestionSection";
+import { TeamDashboard } from "./TeamDashboard";
+import type { ReviewExtractionDTO, RejectionCategory } from "@/types/review";
 
-type AdminSection = "review" | "sources" | "ingestion" | "health" | "policy";
-
-interface Source {
-  id: string;
-  name: string;
-  type: "github_org" | "notion_workspace" | "gdrive_folder" | "discord_server";
-  status: "active" | "error" | "syncing";
-  lastSync: string;
-  itemCount: number;
-}
-
-const mockSources: Source[] = [
-  { id: "1", name: "PROVES/PROVESKit", type: "github_org", status: "active", lastSync: "2 hours ago", itemCount: 234 },
-  { id: "2", name: "Team Wiki", type: "notion_workspace", status: "active", lastSync: "1 day ago", itemCount: 89 },
-  { id: "3", name: "Project Docs", type: "gdrive_folder", status: "error", lastSync: "3 days ago", itemCount: 45 },
-  { id: "4", name: "#engineering", type: "discord_server", status: "syncing", lastSync: "syncing...", itemCount: 1203 },
-];
+type AdminSection = "dashboard" | "review" | "sources" | "ingestion" | "health" | "policy";
 
 export function AdminView() {
-  const [activeSection, setActiveSection] = useState<AdminSection>("review");
+  const [activeSection, setActiveSection] = useState<AdminSection>("dashboard");
   const [selectedExtractionId, setSelectedExtractionId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("pending");
   const [typeFilter, setTypeFilter] = useState<string>("");
+  const [viewMode, setViewMode] = useState<"simple" | "detailed">("simple"); // simple = engineer-friendly
 
+  // Review extractions
   const {
     extractions,
     loading,
     error,
     fetchExtractions,
     refresh,
+    recordDecision,
   } = useReviewExtractions();
 
+  // Team sources (extraction pipelines)
+  const {
+    sources,
+    recentJobs,
+    stats,
+    loading: sourcesLoading,
+    error: sourcesError,
+    fetchSources,
+    fetchRecentJobs,
+    fetchStats,
+    createSource,
+    updateSource,
+    deleteSource,
+    triggerCrawl,
+    toggleSourceActive,
+  } = useSources();
+
   const sections = [
+    { id: "dashboard" as const, label: "Dashboard", icon: Home, description: "Team overview & contributions" },
     { id: "review" as const, label: "Review Queue", icon: FileCheck, description: "Approve/reject extractions", badge: extractions.length },
     { id: "sources" as const, label: "Sources", icon: Database, description: "Connected repos, drives, discord" },
     { id: "ingestion" as const, label: "Ingestion", icon: RefreshCw, description: "Crawl status, refresh cadence" },
     { id: "health" as const, label: "Index Health", icon: BarChart3, description: "Coverage, drift, duplicates" },
     { id: "policy" as const, label: "Policy", icon: Shield, description: "Approval rules, permissions" },
   ];
-
-  const getStatusIcon = (status: Source["status"]) => {
-    switch (status) {
-      case "active":
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case "error":
-        return <AlertCircle className="w-4 h-4 text-red-500" />;
-      case "syncing":
-        return <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />;
-    }
-  };
-
-  const getTypeLabel = (type: Source["type"]) => {
-    switch (type) {
-      case "github_org":
-        return "GitHub";
-      case "notion_workspace":
-        return "Notion";
-      case "gdrive_folder":
-        return "Google Drive";
-      case "discord_server":
-        return "Discord";
-    }
-  };
 
   const getConfidenceColor = (score: number) => {
     if (score >= 0.8) return "text-green-600 bg-green-50";
@@ -103,6 +93,40 @@ export function AdminView() {
 
   // If viewing a specific extraction, show the detail view
   if (selectedExtractionId) {
+    const selectedExtraction = extractions.find(e => e.extraction_id === selectedExtractionId);
+
+    // Simple mode: Engineer-friendly review with knowledge capture
+    if (viewMode === "simple" && selectedExtraction) {
+      return (
+        <EngineerReview
+          extraction={selectedExtraction}
+          onApprove={async (notes, captureAnswers) => {
+            // TODO: Store captureAnswers as enrichment metadata
+            await recordDecision({
+              p_extraction_id: selectedExtractionId,
+              p_decision: "accept",
+              p_reviewer_id: "dashboard_user",
+              p_decision_reason: notes || "Approved via engineer review",
+              // captureAnswers would be stored separately as epistemic enrichment
+            });
+            handleBackFromDetail();
+          }}
+          onReject={async (reason, category) => {
+            await recordDecision({
+              p_extraction_id: selectedExtractionId,
+              p_decision: "reject",
+              p_reviewer_id: "dashboard_user",
+              p_rejection_category: category as RejectionCategory,
+              p_decision_reason: reason,
+            });
+            handleBackFromDetail();
+          }}
+          onBack={handleBackFromDetail}
+        />
+      );
+    }
+
+    // Detailed mode: Full researcher view
     return (
       <ExtractionDetail
         extractionId={selectedExtractionId}
@@ -147,6 +171,16 @@ export function AdminView() {
       </div>
 
       {/* Section Content */}
+      {activeSection === "dashboard" && (
+        <TeamDashboard
+          teamName="PROVES Lab"
+          teamSlug="proves-lab"
+          userRole="lead"
+          onNavigateToReview={() => setActiveSection("review")}
+          onNavigateToSources={() => setActiveSection("sources")}
+        />
+      )}
+
       {activeSection === "review" && (
         <div>
           {/* Filters and Actions */}
@@ -236,107 +270,30 @@ export function AdminView() {
       )}
 
       {activeSection === "sources" && (
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Connected Sources</h2>
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
-              <Plus className="w-4 h-4" />
-              Add Source
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            {mockSources.map((source) => (
-              <div
-                key={source.id}
-                className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg"
-              >
-                <div className="flex items-center gap-4">
-                  {getStatusIcon(source.status)}
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-medium text-gray-900">{source.name}</h3>
-                      <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
-                        {getTypeLabel(source.type)}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-500">
-                      {source.itemCount} items · Last sync: {source.lastSync}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
-                    <RefreshCw className="w-4 h-4" />
-                  </button>
-                  <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
-                    <ExternalLink className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <SourcesSection
+          sources={sources}
+          loading={sourcesLoading}
+          error={sourcesError}
+          onCreateSource={createSource}
+          onUpdateSource={updateSource}
+          onDeleteSource={deleteSource}
+          onTriggerCrawl={triggerCrawl}
+          onToggleActive={toggleSourceActive}
+          onRefresh={fetchSources}
+        />
       )}
 
       {activeSection === "ingestion" && (
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Ingestion Queue</h2>
-
-          {/* Stats */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
-            <div className="p-4 bg-white border border-gray-200 rounded-lg">
-              <p className="text-sm text-gray-500">Pending</p>
-              <p className="text-2xl font-bold text-gray-900">24</p>
-            </div>
-            <div className="p-4 bg-white border border-gray-200 rounded-lg">
-              <p className="text-sm text-gray-500">Processing</p>
-              <p className="text-2xl font-bold text-blue-600">3</p>
-            </div>
-            <div className="p-4 bg-white border border-gray-200 rounded-lg">
-              <p className="text-sm text-gray-500">Completed Today</p>
-              <p className="text-2xl font-bold text-green-600">47</p>
-            </div>
-            <div className="p-4 bg-white border border-gray-200 rounded-lg">
-              <p className="text-sm text-gray-500">Failed</p>
-              <p className="text-2xl font-bold text-red-600">2</p>
-            </div>
-          </div>
-
-          {/* Recent Activity */}
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">Recent Activity</h3>
-          <div className="space-y-2">
-            {[
-              { url: "docs.proveskit.space/components/gps", status: "completed", time: "2 min ago" },
-              { url: "github.com/PROVES/software/README.md", status: "processing", time: "now" },
-              { url: "notion.so/Team-Wiki/Architecture", status: "pending", time: "queued" },
-              { url: "drive.google.com/docs/ICD-v2", status: "failed", time: "5 min ago" },
-            ].map((item, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm"
-              >
-                <span className="text-gray-700 font-mono">{item.url}</span>
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`px-2 py-0.5 rounded text-xs ${
-                      item.status === "completed"
-                        ? "bg-green-100 text-green-700"
-                        : item.status === "processing"
-                        ? "bg-blue-100 text-blue-700"
-                        : item.status === "failed"
-                        ? "bg-red-100 text-red-700"
-                        : "bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    {item.status}
-                  </span>
-                  <span className="text-gray-400">{item.time}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <IngestionSection
+          jobs={recentJobs}
+          stats={stats}
+          sources={sources}
+          loading={sourcesLoading}
+          onRefresh={() => {
+            fetchRecentJobs();
+            fetchStats();
+          }}
+        />
       )}
 
       {activeSection === "health" && (

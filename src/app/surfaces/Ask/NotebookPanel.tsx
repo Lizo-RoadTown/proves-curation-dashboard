@@ -17,8 +17,20 @@ import {
   Clock,
   TrendingUp,
   ExternalLink,
+  Github,
+  HardDrive,
+  Loader2,
 } from "lucide-react";
+import { AttachmentPicker } from "./AttachmentPicker";
+import type {
+  UserAttachment,
+  RecentAttachment,
+  AttachResourceParams,
+  ProviderConnection,
+  AttachmentProvider,
+} from "@/types/attachments";
 
+// Legacy type for backwards compatibility during transition
 export interface Attachment {
   id: string;
   name: string;
@@ -28,20 +40,35 @@ export interface Attachment {
 }
 
 interface NotebookPanelProps {
-  attachments: Attachment[];
-  onAddAttachment: () => void;
-  onRemoveAttachment: (id: string) => void;
-  recentAttachments?: Attachment[];
+  // New typed attachments from database
+  attachments: UserAttachment[];
+  recentAttachments: RecentAttachment[];
+  connections: ProviderConnection[];
+  loading?: boolean;
+  error?: string | null;
+  conversationId: string;
+  // Actions
+  onAttach: (params: AttachResourceParams) => Promise<string | null>;
+  onDetach: (attachmentId: string) => Promise<boolean>;
+  onConnect: (provider: AttachmentProvider) => void;
+  onDisconnect: (provider: AttachmentProvider) => void;
 }
 
 export function NotebookPanel({
   attachments,
-  onAddAttachment,
-  onRemoveAttachment,
-  recentAttachments = [],
+  recentAttachments,
+  connections,
+  loading = false,
+  error,
+  conversationId,
+  onAttach,
+  onDetach,
+  onConnect,
+  onDisconnect,
 }: NotebookPanelProps) {
   const [activeTab, setActiveTab] = useState<"my" | "collective">("my");
   const [collectiveSearch, setCollectiveSearch] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   return (
     <div className="w-72 border-l bg-gray-50 flex flex-col flex-shrink-0">
@@ -74,9 +101,11 @@ export function NotebookPanel({
         {activeTab === "my" ? (
           <MyNotebookTab
             attachments={attachments}
-            onAddAttachment={onAddAttachment}
-            onRemoveAttachment={onRemoveAttachment}
             recentAttachments={recentAttachments}
+            loading={loading}
+            error={error}
+            onOpenPicker={() => setPickerOpen(true)}
+            onDetach={onDetach}
           />
         ) : (
           <CollectiveTab
@@ -85,6 +114,17 @@ export function NotebookPanel({
           />
         )}
       </div>
+
+      {/* Attachment Picker Dialog */}
+      <AttachmentPicker
+        isOpen={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onAttach={onAttach}
+        conversationId={conversationId}
+        connections={connections}
+        onConnect={onConnect}
+        onDisconnect={onDisconnect}
+      />
     </div>
   );
 }
@@ -94,46 +134,64 @@ export function NotebookPanel({
 // =============================================================================
 
 interface MyNotebookTabProps {
-  attachments: Attachment[];
-  onAddAttachment: () => void;
-  onRemoveAttachment: (id: string) => void;
-  recentAttachments: Attachment[];
+  attachments: UserAttachment[];
+  recentAttachments: RecentAttachment[];
+  loading: boolean;
+  error?: string | null;
+  onOpenPicker: () => void;
+  onDetach: (attachmentId: string) => Promise<boolean>;
 }
 
 function MyNotebookTab({
   attachments,
-  onAddAttachment,
-  onRemoveAttachment,
   recentAttachments,
+  loading,
+  error,
+  onOpenPicker,
+  onDetach,
 }: MyNotebookTabProps) {
   return (
     <div className="space-y-4">
       {/* Add Attachment Button */}
       <button
-        onClick={onAddAttachment}
+        onClick={onOpenPicker}
         className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
       >
         <Paperclip className="w-4 h-4" />
         Attach repo, folder, or doc
       </button>
 
+      {/* Error */}
+      {error && (
+        <div className="p-2 text-xs text-red-600 bg-red-50 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {/* Loading */}
+      {loading && (
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+        </div>
+      )}
+
       {/* Current Conversation Attachments */}
-      {attachments.length > 0 ? (
+      {!loading && attachments.length > 0 ? (
         <div>
           <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">
             This Conversation ({attachments.length})
           </h4>
           <div className="space-y-2">
             {attachments.map((att) => (
-              <AttachmentCard
+              <UserAttachmentCard
                 key={att.id}
                 attachment={att}
-                onRemove={() => onRemoveAttachment(att.id)}
+                onRemove={() => onDetach(att.id)}
               />
             ))}
           </div>
         </div>
-      ) : (
+      ) : !loading ? (
         <div className="text-center py-6">
           <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
             <FileText className="w-6 h-6 text-gray-400" />
@@ -143,7 +201,7 @@ function MyNotebookTab({
             Attach files to include them in your search
           </p>
         </div>
-      )}
+      ) : null}
 
       {/* Recent Attachments */}
       {recentAttachments.length > 0 && (
@@ -159,8 +217,8 @@ function MyNotebookTab({
                 className="w-full text-left px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm hover:border-blue-300 hover:bg-blue-50 transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <AttachmentIcon type={att.type} />
-                  <span className="truncate">{att.name}</span>
+                  <ProviderIcon provider={att.provider} resourceType={att.resource_type} />
+                  <span className="truncate">{att.display_name}</span>
                 </div>
               </button>
             ))}
@@ -280,22 +338,22 @@ function CollectiveTab({ searchQuery, onSearchChange }: CollectiveTabProps) {
 // HELPER COMPONENTS
 // =============================================================================
 
-interface AttachmentCardProps {
-  attachment: Attachment;
+interface UserAttachmentCardProps {
+  attachment: UserAttachment;
   onRemove: () => void;
 }
 
-function AttachmentCard({ attachment, onRemove }: AttachmentCardProps) {
+function UserAttachmentCard({ attachment, onRemove }: UserAttachmentCardProps) {
   return (
     <div className="flex items-center justify-between px-3 py-2 bg-white border border-gray-200 rounded-lg group">
       <div className="flex items-center gap-2 min-w-0">
-        <AttachmentIcon type={attachment.type} />
+        <ProviderIcon provider={attachment.provider} resourceType={attachment.resource_type} />
         <div className="min-w-0">
           <p className="text-sm font-medium text-gray-900 truncate">
-            {attachment.name}
+            {attachment.display_name}
           </p>
-          {attachment.path && (
-            <p className="text-xs text-gray-500 truncate">{attachment.path}</p>
+          {attachment.resource_path && (
+            <p className="text-xs text-gray-500 truncate">{attachment.resource_path}</p>
           )}
         </div>
       </div>
@@ -309,6 +367,45 @@ function AttachmentCard({ attachment, onRemove }: AttachmentCardProps) {
   );
 }
 
+/**
+ * Icon for provider + resource type combo
+ */
+function ProviderIcon({
+  provider,
+  resourceType,
+}: {
+  provider: string;
+  resourceType: string;
+}) {
+  if (provider === "github") {
+    return resourceType === "repo" ? (
+      <FolderGit2 className="w-4 h-4 text-purple-500" />
+    ) : (
+      <Github className="w-4 h-4 text-gray-700" />
+    );
+  }
+
+  if (provider === "google_drive") {
+    return resourceType === "folder" ? (
+      <FolderGit2 className="w-4 h-4 text-yellow-500" />
+    ) : (
+      <HardDrive className="w-4 h-4 text-green-500" />
+    );
+  }
+
+  if (provider === "notion") {
+    return <FileText className="w-4 h-4 text-orange-500" />;
+  }
+
+  if (provider === "discord") {
+    return <FileText className="w-4 h-4 text-indigo-500" />;
+  }
+
+  // Default
+  return <FileText className="w-4 h-4 text-gray-500" />;
+}
+
+// Legacy icon helper for backwards compatibility
 function AttachmentIcon({ type }: { type: Attachment["type"] }) {
   const icons = {
     repo: <FolderGit2 className="w-4 h-4 text-purple-500" />,

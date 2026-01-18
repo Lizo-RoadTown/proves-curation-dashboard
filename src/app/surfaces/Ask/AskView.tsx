@@ -5,13 +5,23 @@
  * - Left: ScopeChips (search scope toggles and filters)
  * - Center: ChatPane (agent conversation)
  * - Right: NotebookPanel (attachments and collective overview)
+ *
+ * Integrations:
+ * - MCP Server: Searches collective knowledge and external sources
+ * - User's AI Model: Uses user's API key for chat completions
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
+import { Settings } from "lucide-react";
 import { ScopeChips } from "./ScopeChips";
 import { ChatPane, type ChatMessage } from "./ChatPane";
-import { NotebookPanel, type Attachment } from "./NotebookPanel";
+import { NotebookPanel } from "./NotebookPanel";
+import { ModelConfigDialog } from "./ModelConfigDialog";
 import type { EvidenceData } from "./EvidenceStrip";
+import { useAttachments } from "@/hooks/useAttachments";
+import { useMCP } from "@/hooks/useMCP";
+import { useModelConfig } from "@/hooks/useModelConfig";
+import type { AttachmentProvider } from "@/types/attachments";
 
 export function AskView() {
   // Chat state
@@ -20,11 +30,12 @@ export function AskView() {
       id: "welcome",
       role: "assistant",
       content:
-        "Hi! I can help you find information from the collective library and your attached files. Ask me about PROVES, F' components, procedures, or any technical topic.",
+        "Hi! I can help you find information from the collective library and your attached files. Ask me about PROVES, F' components, procedures, or any technical topic.\n\n**Tip:** Click the ⚙️ button in the top right to configure your AI model.",
       timestamp: new Date(),
     },
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showModelConfig, setShowModelConfig] = useState(false);
 
   // Scope state
   const [scopeCollective, setScopeCollective] = useState(true);
@@ -33,17 +44,68 @@ export function AskView() {
   const [domainFilter, setDomainFilter] = useState("all");
   const [timeFilter, setTimeFilter] = useState("latest");
 
-  // Notebook state
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [recentAttachments] = useState<Attachment[]>([
-    // Mock recent attachments - will come from user_attachments table
-    { id: "recent-1", name: "PROVES-2 Software", type: "repo", addedAt: new Date() },
-    { id: "recent-2", name: "Flight Procedures", type: "folder", addedAt: new Date() },
-  ]);
+  // Conversation ID (in a real app, this would come from router/state)
+  const conversationId = useMemo(() => crypto.randomUUID(), []);
+
+  // Mock user ID (in a real app, this would come from auth context)
+  // For now, use a stable mock ID so attachments work locally
+  const mockUserId = "00000000-0000-0000-0000-000000000001";
+
+  // MCP Server connection for knowledge search
+  const {
+    connection: mcpConnection,
+    askWithContext,
+  } = useMCP({ autoConnect: true });
+
+  // User's model configuration (stored locally)
+  const {
+    config: modelConfig,
+    configDisplay,
+    isConfigured: modelConfigured,
+    setConfig: setModelConfig,
+    validateApiKey,
+    generateCompletion,
+    isGenerating,
+    abortGeneration,
+  } = useModelConfig();
+
+  // Attachments from database via hook
+  const {
+    attachments,
+    recentAttachments,
+    connections,
+    loading: attachmentsLoading,
+    error: attachmentsError,
+    attachResource,
+    detachResource,
+  } = useAttachments({
+    conversationId,
+    userId: mockUserId,
+  });
+
+  /**
+   * Handle connecting to a provider (OAuth flow)
+   * TODO: Implement actual OAuth flow
+   */
+  const handleConnect = useCallback((provider: AttachmentProvider) => {
+    console.log("Connect to provider:", provider);
+    // For now, just log - will implement OAuth in future
+    alert(`OAuth flow for ${provider} not yet implemented.\nIn production, this would open ${provider === 'github' ? 'GitHub' : 'Google'} authorization.`);
+  }, []);
+
+  /**
+   * Handle disconnecting from a provider
+   * TODO: Implement actual disconnect
+   */
+  const handleDisconnect = useCallback((provider: AttachmentProvider) => {
+    console.log("Disconnect from provider:", provider);
+    // For now, just log
+    alert(`Disconnect ${provider} not yet implemented.`);
+  }, []);
 
   /**
    * Handle sending a message
-   * TODO: Integrate with MCP server for actual agent responses
+   * Uses MCP server for knowledge search + user's AI model for completion
    */
   const handleSendMessage = useCallback(
     async (content: string) => {
@@ -57,92 +119,220 @@ export function AskView() {
       setMessages((prev) => [...prev, userMessage]);
       setIsLoading(true);
 
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      try {
+        // Step 1: Search knowledge via MCP server
+        let mcpResults: { answer: string; evidence: any; toolsUsed: string[] } | null = null;
 
-      // Create mock evidence based on scope
-      const evidence: EvidenceData = {
-        collectiveCount: scopeCollective ? Math.floor(Math.random() * 8) + 2 : 0,
-        notebookCount: scopeNotebook && attachments.length > 0 ? Math.floor(Math.random() * 3) + 1 : 0,
-        confidence: Math.random() > 0.3 ? "high" : Math.random() > 0.5 ? "medium" : "low",
-        freshnessLabel: "2 days ago",
-        sources: [
-          // Mock sources - will come from actual search results
-          ...(scopeCollective
-            ? [
-                {
-                  id: "src-1",
-                  type: "collective" as const,
-                  title: "F' Component Model Documentation",
-                  sourceUrl: "https://nasa.github.io/fprime/",
-                  sourceType: "documentation",
-                  excerpt: `Relevant section about ${content.slice(0, 30)}...`,
-                  capturedAt: "Jan 15, 2026",
-                },
-                {
-                  id: "src-2",
-                  type: "collective" as const,
-                  title: "PROVES Kit Integration Guide",
-                  sourceType: "guide",
-                  excerpt: "Hardware integration patterns and best practices...",
-                  capturedAt: "Jan 10, 2026",
-                },
-              ]
-            : []),
-          ...(scopeNotebook && attachments.length > 0
-            ? [
-                {
-                  id: "src-3",
-                  type: "notebook" as const,
-                  title: attachments[0]?.name || "Attached file",
-                  sourceType: "local file",
-                  excerpt: "Found in your attached files...",
-                },
-              ]
-            : []),
-        ],
-      };
+        if (mcpConnection.connected) {
+          try {
+            mcpResults = await askWithContext({
+              query: content,
+              scope: {
+                includeCollective: scopeCollective,
+                includeNotebook: scopeNotebook,
+                includeExternal: true,
+                attachmentIds: attachments.map((a) => a.id),
+              },
+              conversationId,
+              userId: mockUserId,
+            });
+          } catch (error) {
+            console.error("MCP search failed:", error);
+          }
+        }
 
-      // Add assistant response
-      const assistantMessage: ChatMessage = {
-        id: `assistant-${Date.now()}`,
-        role: "assistant",
-        content: generateMockResponse(content, scopeCollective, scopeNotebook),
-        timestamp: new Date(),
-        evidence,
-      };
+        // Step 2: Generate response using user's AI model (if configured)
+        let responseContent: string;
 
-      setMessages((prev) => [...prev, assistantMessage]);
-      setIsLoading(false);
+        if (modelConfigured && modelConfig) {
+          // Build context from MCP results
+          const contextSummary = mcpResults
+            ? `\n\n[Search Results from PROVES Library]\n${mcpResults.answer}\n\nTools used: ${mcpResults.toolsUsed.join(", ")}`
+            : "";
+
+          const systemPrompt = `You are a helpful assistant for the PROVES Library - a knowledge base for CubeSat/SmallSat development using F' framework and PROVES Kit.
+
+When answering questions:
+1. Use the search results provided to give accurate, specific answers
+2. Reference specific components, interfaces, or documentation when relevant
+3. For hardware questions, mention relevant specifications and potential conflicts
+4. For external searches (manufacturers, papers, standards), provide the links returned
+
+${contextSummary}`;
+
+          // Add streaming placeholder
+          const streamingMessageId = `assistant-${Date.now()}`;
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: streamingMessageId,
+              role: "assistant",
+              content: "",
+              timestamp: new Date(),
+              isStreaming: true,
+            },
+          ]);
+
+          responseContent = await generateCompletion({
+            messages: [{ role: "user", content }],
+            systemPrompt,
+            onStream: (chunk) => {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === streamingMessageId
+                    ? { ...m, content: m.content + chunk }
+                    : m
+                )
+              );
+            },
+          });
+
+          // Finalize the streaming message
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === streamingMessageId
+                ? {
+                    ...m,
+                    content: responseContent,
+                    isStreaming: false,
+                    evidence: mcpResults
+                      ? {
+                          collectiveCount: mcpResults.evidence.collectiveCount,
+                          notebookCount: mcpResults.evidence.notebookCount,
+                          confidence: mcpResults.evidence.confidence,
+                          freshnessLabel: mcpResults.evidence.freshnessLabel,
+                          sources: mcpResults.evidence.sources.map((s: any) => ({
+                            id: s.id,
+                            type: s.type,
+                            title: s.title,
+                            sourceUrl: s.sourceUrl,
+                            sourceType: s.sourceType,
+                            excerpt: s.excerpt,
+                            capturedAt: s.capturedAt,
+                          })),
+                        }
+                      : undefined,
+                  }
+                : m
+            )
+          );
+        } else {
+          // No model configured - use MCP results directly or show config prompt
+          if (mcpResults) {
+            responseContent = mcpResults.answer;
+          } else {
+            responseContent = `I found some information, but I need an AI model to help synthesize the answer.
+
+**To get full responses:**
+1. Click the ⚙️ settings button in the top right
+2. Add your API key from Anthropic, OpenAI, or Google
+3. Your key stays in your browser - it's never sent to our servers
+
+For now, here's what I can tell you based on the knowledge library search.`;
+          }
+
+          // Create evidence from MCP results
+          const evidence: EvidenceData = mcpResults
+            ? {
+                collectiveCount: mcpResults.evidence.collectiveCount,
+                notebookCount: mcpResults.evidence.notebookCount,
+                confidence: mcpResults.evidence.confidence,
+                freshnessLabel: mcpResults.evidence.freshnessLabel,
+                sources: mcpResults.evidence.sources.map((s: any) => ({
+                  id: s.id,
+                  type: s.type,
+                  title: s.title,
+                  sourceUrl: s.sourceUrl,
+                  sourceType: s.sourceType,
+                  excerpt: s.excerpt,
+                  capturedAt: s.capturedAt,
+                })),
+              }
+            : {
+                collectiveCount: 0,
+                notebookCount: 0,
+                confidence: "low",
+                freshnessLabel: "now",
+                sources: [],
+              };
+
+          const assistantMessage: ChatMessage = {
+            id: `assistant-${Date.now()}`,
+            role: "assistant",
+            content: responseContent,
+            timestamp: new Date(),
+            evidence,
+          };
+
+          setMessages((prev) => [...prev, assistantMessage]);
+        }
+      } catch (error) {
+        console.error("Message handling failed:", error);
+
+        const errorMessage: ChatMessage = {
+          id: `error-${Date.now()}`,
+          role: "assistant",
+          content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : "Unknown error"}. Please try again.`,
+          timestamp: new Date(),
+        };
+
+        setMessages((prev) => [...prev, errorMessage]);
+      } finally {
+        setIsLoading(false);
+      }
     },
-    [scopeCollective, scopeNotebook, attachments]
+    [
+      scopeCollective,
+      scopeNotebook,
+      attachments,
+      mcpConnection.connected,
+      askWithContext,
+      conversationId,
+      mockUserId,
+      modelConfigured,
+      modelConfig,
+      generateCompletion,
+    ]
   );
 
-  /**
-   * Handle adding an attachment
-   * TODO: Open attachment picker dialog
-   */
-  const handleAddAttachment = useCallback(() => {
-    // For now, add a mock attachment
-    const mockAttachment: Attachment = {
-      id: `att-${Date.now()}`,
-      name: `Project Folder ${attachments.length + 1}`,
-      type: "folder",
-      path: "/path/to/folder",
-      addedAt: new Date(),
-    };
-    setAttachments((prev) => [...prev, mockAttachment]);
-  }, [attachments.length]);
-
-  /**
-   * Handle removing an attachment
-   */
-  const handleRemoveAttachment = useCallback((id: string) => {
-    setAttachments((prev) => prev.filter((a) => a.id !== id));
-  }, []);
 
   return (
-    <div className="flex h-[calc(100vh-64px)]">
+    <div className="flex h-[calc(100vh-64px)] relative">
+      {/* Model Config Button - Top Right */}
+      <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+        {/* Connection Status */}
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs">
+          <span
+            className={`w-2 h-2 rounded-full ${
+              mcpConnection.connected ? "bg-green-500" : "bg-gray-300"
+            }`}
+          />
+          <span className="text-gray-600">
+            {mcpConnection.connected ? "Library connected" : "Offline"}
+          </span>
+        </div>
+
+        {/* Model Status */}
+        {modelConfigured && (
+          <div className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-600">
+            {configDisplay.providerName} • {configDisplay.modelName}
+          </div>
+        )}
+
+        {/* Settings Button */}
+        <button
+          onClick={() => setShowModelConfig(true)}
+          className={`p-2 rounded-lg transition-colors ${
+            modelConfigured
+              ? "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+              : "bg-blue-600 text-white hover:bg-blue-700"
+          }`}
+          title="Configure AI Model"
+        >
+          <Settings className="w-4 h-4" />
+        </button>
+      </div>
+
       {/* Left: Scope Chips */}
       <ScopeChips
         scopeCollective={scopeCollective}
@@ -161,7 +351,7 @@ export function AskView() {
       <ChatPane
         messages={messages}
         onSendMessage={handleSendMessage}
-        isLoading={isLoading}
+        isLoading={isLoading || isGenerating}
         scopeCollective={scopeCollective}
         scopeNotebook={scopeNotebook}
         attachmentCount={attachments.length}
@@ -170,74 +360,26 @@ export function AskView() {
       {/* Right: Notebook Panel */}
       <NotebookPanel
         attachments={attachments}
-        onAddAttachment={handleAddAttachment}
-        onRemoveAttachment={handleRemoveAttachment}
         recentAttachments={recentAttachments}
+        connections={connections}
+        loading={attachmentsLoading}
+        error={attachmentsError}
+        conversationId={conversationId}
+        onAttach={attachResource}
+        onDetach={detachResource}
+        onConnect={handleConnect}
+        onDisconnect={handleDisconnect}
+      />
+
+      {/* Model Configuration Dialog */}
+      <ModelConfigDialog
+        isOpen={showModelConfig}
+        onClose={() => setShowModelConfig(false)}
+        currentConfig={modelConfig}
+        onSave={setModelConfig}
+        onValidate={validateApiKey}
       />
     </div>
   );
 }
 
-/**
- * Generate a mock response based on the query
- * This will be replaced with actual MCP server integration
- */
-function generateMockResponse(
-  query: string,
-  includeCollective: boolean,
-  includeNotebook: boolean
-): string {
-  const queryLower = query.toLowerCase();
-
-  // Context-aware mock responses
-  if (queryLower.includes("gps") || queryLower.includes("component")) {
-    return `Based on the F' Component Model documentation, GPS components in PROVES follow a standard pattern:
-
-1. **Component Definition**: GPS components inherit from PassiveComponentBase
-2. **Ports**: Typically include SerialRead, SerialWrite, and TimeGet ports
-3. **Commands**: Standard commands include GPS_CONFIG and GPS_STATUS
-
-${includeCollective ? "I found 5 relevant items in the collective library covering GPS integration patterns." : ""}
-${includeNotebook ? "\nI also checked your attached files for project-specific GPS configurations." : ""}
-
-Would you like more details about any specific aspect?`;
-  }
-
-  if (queryLower.includes("procedure") || queryLower.includes("deploy")) {
-    return `Here's what I found about deployment procedures:
-
-**Pre-deployment Checklist:**
-- Verify flight software version
-- Confirm ground station connectivity
-- Run power system diagnostics
-
-**Deployment Sequence:**
-1. Initialize communication links
-2. Deploy solar panels (T+30s)
-3. Activate attitude control (T+60s)
-
-${includeCollective ? "These procedures are documented in the Ops runbook collection." : ""}`;
-  }
-
-  if (queryLower.includes("i2c") || queryLower.includes("bus")) {
-    return `The I2C bus architecture in PROVES uses:
-
-- **Main Bus**: 400kHz for sensor communication
-- **Secondary Bus**: 100kHz for legacy devices
-- **Address Space**: 0x10-0x7E reserved for flight hardware
-
-Key components on the bus include GPS, IMU, and power management ICs.`;
-  }
-
-  // Default response
-  return `I searched ${includeCollective ? "the collective library" : ""}${includeCollective && includeNotebook ? " and " : ""}${includeNotebook ? "your attached files" : ""} for information about "${query}".
-
-Here's what I found:
-
-This is a placeholder response. When connected to the MCP server, I'll provide actual search results from your knowledge base.
-
-You can:
-- Refine your question for more specific results
-- Adjust the scope filters on the left
-- Attach relevant files for project-specific context`;
-}

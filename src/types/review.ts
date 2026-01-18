@@ -104,6 +104,52 @@ export const REJECTION_GROUPS: Record<RejectionFamily, { label: string; categori
 };
 
 // =============================================================================
+// ORGANIZATION / CONTRIBUTOR TYPES
+// =============================================================================
+
+/**
+ * Organization/University that contributed the source
+ */
+export interface ContributingOrganization {
+  /** UUID of the organization */
+  org_id: string;
+  /** Display name (e.g., "PROVES Lab", "University of Colorado") */
+  org_name: string;
+  /** URL-safe slug */
+  org_slug: string;
+}
+
+/**
+ * Individual contributor who submitted or verified
+ */
+export interface Contributor {
+  /** UUID of the user */
+  user_id: string;
+  /** Display name */
+  display_name: string;
+  /** Which organization they belong to */
+  organization: ContributingOrganization | null;
+  /** Their role: student, researcher, engineer, admin */
+  role: 'student' | 'researcher' | 'engineer' | 'lead' | 'admin';
+}
+
+/**
+ * Provenance tracking - who contributed what
+ */
+export interface ExtractionProvenance {
+  /** Which organization owns the source this came from */
+  source_organization: ContributingOrganization | null;
+  /** Who originally submitted or triggered this extraction */
+  submitted_by: Contributor | null;
+  /** Who verified/approved (if any) */
+  verified_by: Contributor | null;
+  /** When it was verified */
+  verified_at: string | null;
+  /** Is this "shared" (verified by source org) or still "pending" */
+  sharing_status: 'private' | 'pending_review' | 'shared';
+}
+
+// =============================================================================
 // DTOs
 // =============================================================================
 
@@ -231,6 +277,9 @@ export interface ReviewExtractionDTO {
 
   // Edit history count
   edit_count: number;
+
+  // Provenance - who contributed this
+  provenance: ExtractionProvenance;
 }
 
 // =============================================================================
