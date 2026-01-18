@@ -1,16 +1,34 @@
 /**
- * Graph3D - Simple 3D knowledge graph using 3d-force-graph
+ * Graph3D - 3D Knowledge Graph with Mission Control Instruments
+ *
+ * Uses 3d-force-graph for the knowledge graph visualization.
+ * Layers Mission Control instruments (pipelines, agent avatar, heat volume)
+ * directly into the same Three.js scene for a unified 3D experience.
+ *
+ * Mission Control instruments:
+ * - PipelineStreams: Animated particles flowing along curves (inbound/outbound)
+ * - AgentAvatar: Single 3D object encoding health/confidence/drift/error via motion
+ * - HeatVolume: Point sprites with additive blending showing validation activity
  *
  * Click on nodes/edges to see details in a side panel.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import ForceGraph3D from '3d-force-graph';
+import * as THREE from 'three';
 import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { RefreshCw, Box, X, Circle, ArrowRight } from 'lucide-react';
 import { Badge } from '@/app/components/ui/badge';
 import { supabase } from '@/lib/supabase';
+import {
+  initMissionControlLayer,
+  updateMissionControlLayer,
+  disposeMissionControlLayer,
+  emitHeat,
+  type MissionControlLayer,
+  type MissionControlState,
+} from './MissionControl/MissionControlLayer';
 
 // =============================================================================
 // TYPES
@@ -20,6 +38,14 @@ interface Graph3DProps {
   highlightOrgId?: string;
   height?: number;
   className?: string;
+  /** Enable Mission Control instruments (pipelines, agent avatar, heat volume) */
+  enableMissionControl?: boolean;
+  /** Callback when scene is ready - provides access to Three.js context */
+  onSceneReady?: (ctx: {
+    scene: THREE.Scene;
+    camera: THREE.Camera;
+    renderer: THREE.WebGLRenderer;
+  }) => void;
 }
 
 interface Node3D {
@@ -60,9 +86,13 @@ export function Graph3D({
   highlightOrgId,
   height = 600,
   className = '',
+  enableMissionControl = false,
+  onSceneReady,
 }: Graph3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<any>(null);
+  const mcLayerRef = useRef<MissionControlLayer | null>(null);
+  const nodesMapRef = useRef<Map<string, Node3D>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [nodeCount, setNodeCount] = useState(0);
@@ -71,6 +101,21 @@ export function Graph3D({
   const autoRotateRef = useRef(true);
   const [selected, setSelected] = useState<SelectedItem>(null);
   const selectedRef = useRef<SelectedItem>(null);
+
+  // Mission Control state (would come from Supabase realtime in production)
+  const [mcState, setMcState] = useState<MissionControlState>({
+    pipelines: {
+      inbound: { rate: 1.2, latencyMs: 350, status: 'healthy' },
+      outbound: { rate: 0.8, latencyMs: 420, status: 'healthy' },
+    },
+    agent: {
+      health: 0.95,
+      confidence: 0.88,
+      drift: 0.05,
+      errorRate: 0.02,
+    },
+    heat: [],
+  });
 
   // Keep selected ref in sync
   useEffect(() => {
@@ -162,9 +207,38 @@ export function Graph3D({
 
         graphRef.current = graph;
 
-        // Auto-rotate
+        // Build nodes map for position lookup
+        const nodesMap = new Map<string, Node3D>();
+        nodes.forEach(n => nodesMap.set(n.id, n));
+        nodesMapRef.current = nodesMap;
+
+        // Get Three.js context from the graph
+        const scene = graph.scene() as THREE.Scene;
+        const camera = graph.camera() as THREE.Camera;
+        const renderer = graph.renderer() as THREE.WebGLRenderer;
+
+        // Notify parent if callback provided
+        if (onSceneReady) {
+          onSceneReady({ scene, camera, renderer });
+        }
+
+        // Initialize Mission Control layer if enabled
+        if (enableMissionControl && scene && camera && renderer) {
+          mcLayerRef.current = initMissionControlLayer(scene, camera, renderer);
+        }
+
+        // Animation loop for auto-rotate and Mission Control updates
         let angle = 0;
-        rotateInterval = setInterval(() => {
+        let lastTime = performance.now();
+
+        const animate = () => {
+          if (destroyed) return;
+
+          const now = performance.now();
+          const dt = (now - lastTime) / 1000; // delta time in seconds
+          lastTime = now;
+
+          // Auto-rotate camera
           if (autoRotateRef.current && graphRef.current) {
             angle += 0.002;
             graphRef.current.cameraPosition({
@@ -173,7 +247,16 @@ export function Graph3D({
               z: 400 * Math.cos(angle),
             });
           }
-        }, 30);
+
+          // Update Mission Control instruments
+          if (mcLayerRef.current) {
+            updateMissionControlLayer(mcLayerRef.current, mcState, dt);
+          }
+
+          requestAnimationFrame(animate);
+        };
+
+        requestAnimationFrame(animate);
 
         setLoading(false);
       } catch (err) {
@@ -188,10 +271,14 @@ export function Graph3D({
 
     return () => {
       destroyed = true;
-      if (rotateInterval) clearInterval(rotateInterval);
+      // Dispose Mission Control layer
+      if (mcLayerRef.current) {
+        disposeMissionControlLayer(mcLayerRef.current);
+        mcLayerRef.current = null;
+      }
       if (graphRef.current?._destructor) graphRef.current._destructor();
     };
-  }, [height]); // Only re-run if height changes
+  }, [height, enableMissionControl]); // Re-run if height or MC toggle changes
 
   // Manual refresh
   const handleRefresh = async () => {
@@ -426,6 +513,20 @@ export function Graph3D({
       )}
     </Card>
   );
+}
+
+// Export helper to emit heat at a node position (for realtime validation events)
+export function emitHeatAtNode(
+  layer: MissionControlLayer | null,
+  nodeId: string,
+  nodesMap: Map<string, Node3D>,
+  intensity: number = 0.8
+): void {
+  if (!layer) return;
+  const node = nodesMap.get(nodeId);
+  if (node && node.x !== undefined && node.y !== undefined && node.z !== undefined) {
+    emitHeat(layer.heat, new THREE.Vector3(node.x, node.y, node.z), intensity);
+  }
 }
 
 export default Graph3D;
