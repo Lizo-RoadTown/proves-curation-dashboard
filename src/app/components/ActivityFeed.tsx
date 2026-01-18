@@ -1,11 +1,13 @@
 /**
- * ActivityFeed - Real-time view of AI extraction activity
+ * ActivityFeed - Mission Control real-time AI activity view
  *
  * Shows engineers what the AI is doing:
  * - Which sources are being crawled
  * - What entities are being extracted
  * - Confidence levels and reasoning
  * - Errors and retries
+ *
+ * Dark theme with status colors.
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -16,11 +18,9 @@ import {
   CheckCircle,
   AlertCircle,
   Clock,
-  ArrowRight,
+  ChevronRight,
   Pause,
   Play,
-  Filter,
-  Download,
   X,
 } from 'lucide-react';
 
@@ -66,7 +66,6 @@ function generateMockEvents(): ActivityEvent[] {
   const now = new Date();
   const events: ActivityEvent[] = [];
 
-  // Simulate recent activity
   const templates = [
     {
       type: 'crawl_started' as ActivityType,
@@ -149,10 +148,9 @@ function generateMockEvents(): ActivityEvent[] {
     },
   ];
 
-  // Generate events with staggered timestamps
   for (let i = 0; i < templates.length; i++) {
     const template = templates[i];
-    const timestamp = new Date(now.getTime() - (templates.length - i) * 30000); // 30s apart
+    const timestamp = new Date(now.getTime() - (templates.length - i) * 30000);
     events.push({
       id: `evt-${i}`,
       type: template.type,
@@ -163,7 +161,7 @@ function generateMockEvents(): ActivityEvent[] {
     });
   }
 
-  return events.reverse(); // Newest first
+  return events.reverse();
 }
 
 // =============================================================================
@@ -187,14 +185,11 @@ export function ActivityFeed({
   const [selectedEvent, setSelectedEvent] = useState<ActivityEvent | null>(null);
   const feedRef = useRef<HTMLDivElement>(null);
 
-  // Load initial events
   useEffect(() => {
     setEvents(generateMockEvents());
 
-    // Simulate real-time updates
     const interval = setInterval(() => {
       if (!isPaused) {
-        // Add a new random event
         const newEvent: ActivityEvent = {
           id: `evt-${Date.now()}`,
           type: 'extraction_found',
@@ -209,12 +204,11 @@ export function ActivityFeed({
         };
         setEvents((prev) => [newEvent, ...prev].slice(0, maxEvents));
       }
-    }, 5000); // New event every 5 seconds
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [isPaused, maxEvents]);
 
-  // Auto-scroll to top when new events arrive
   useEffect(() => {
     if (autoScroll && feedRef.current && !isPaused) {
       feedRef.current.scrollTop = 0;
@@ -229,20 +223,20 @@ export function ActivityFeed({
     switch (type) {
       case 'crawl_started':
       case 'crawl_progress':
-        return <FileSearch className="w-4 h-4 text-blue-500" />;
+        return <FileSearch className="w-4 h-4 text-blue-400" />;
       case 'crawl_completed':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
+        return <CheckCircle className="w-4 h-4 text-emerald-400" />;
       case 'crawl_failed':
       case 'error':
-        return <AlertCircle className="w-4 h-4 text-red-500" />;
+        return <AlertCircle className="w-4 h-4 text-red-400" />;
       case 'extraction_found':
       case 'extraction_stored':
-        return <Bot className="w-4 h-4 text-purple-500" />;
+        return <Bot className="w-4 h-4 text-purple-400" />;
       case 'extraction_skipped':
       case 'duplicate_detected':
-        return <Link2 className="w-4 h-4 text-yellow-500" />;
+        return <Link2 className="w-4 h-4 text-amber-400" />;
       default:
-        return <Clock className="w-4 h-4 text-gray-400" />;
+        return <Clock className="w-4 h-4 text-slate-500" />;
     }
   };
 
@@ -250,19 +244,19 @@ export function ActivityFeed({
     switch (type) {
       case 'crawl_started':
       case 'crawl_progress':
-        return 'border-l-blue-500 bg-blue-50/50';
+        return 'border-l-blue-500 bg-blue-500/5';
       case 'crawl_completed':
-        return 'border-l-green-500 bg-green-50/50';
+        return 'border-l-emerald-500 bg-emerald-500/5';
       case 'crawl_failed':
       case 'error':
-        return 'border-l-red-500 bg-red-50/50';
+        return 'border-l-red-500 bg-red-500/5';
       case 'extraction_found':
       case 'extraction_stored':
-        return 'border-l-purple-500 bg-purple-50/50';
+        return 'border-l-purple-500 bg-purple-500/5';
       case 'duplicate_detected':
-        return 'border-l-yellow-500 bg-yellow-50/50';
+        return 'border-l-amber-500 bg-amber-500/5';
       default:
-        return 'border-l-gray-300 bg-gray-50/50';
+        return 'border-l-slate-600 bg-slate-800/30';
     }
   };
 
@@ -272,16 +266,16 @@ export function ActivityFeed({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-slate-900">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700 bg-slate-800/50">
         <div className="flex items-center gap-2">
-          <Bot className="w-5 h-5 text-purple-600" />
-          <h3 className="font-semibold text-gray-900">Activity Feed</h3>
+          <Bot className="w-5 h-5 text-purple-400" />
+          <h3 className="font-semibold text-slate-100 text-sm uppercase tracking-wide">Activity Feed</h3>
           {!isPaused && (
-            <span className="flex items-center gap-1 px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">
-              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-              Live
+            <span className="flex items-center gap-1 px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded font-mono">
+              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+              LIVE
             </span>
           )}
         </div>
@@ -291,19 +285,23 @@ export function ActivityFeed({
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value as ActivityType | 'all')}
-            className="text-xs border border-gray-200 rounded px-2 py-1"
+            className="text-xs bg-slate-800 border border-slate-700 text-slate-300 rounded px-2 py-1 font-mono"
           >
-            <option value="all">All Events</option>
-            <option value="extraction_found">Extractions</option>
-            <option value="crawl_progress">Crawls</option>
-            <option value="error">Errors</option>
-            <option value="duplicate_detected">Duplicates</option>
+            <option value="all">ALL</option>
+            <option value="extraction_found">EXTRACTIONS</option>
+            <option value="crawl_progress">CRAWLS</option>
+            <option value="error">ERRORS</option>
+            <option value="duplicate_detected">DUPLICATES</option>
           </select>
 
           {/* Pause/Play */}
           <button
             onClick={() => setIsPaused(!isPaused)}
-            className={`p-1.5 rounded ${isPaused ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'} hover:bg-gray-200`}
+            className={`p-1.5 rounded border transition-colors ${
+              isPaused
+                ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400'
+                : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
+            }`}
             title={isPaused ? 'Resume' : 'Pause'}
           >
             {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
@@ -314,16 +312,16 @@ export function ActivityFeed({
       {/* Events List */}
       <div ref={feedRef} className="flex-1 overflow-y-auto">
         {filteredEvents.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-            <Bot className="w-8 h-8 mb-2 text-gray-300" />
-            <p className="text-sm">No activity yet</p>
+          <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+            <Bot className="w-8 h-8 mb-2 text-slate-600" />
+            <p className="text-sm font-mono uppercase">No activity</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-slate-800">
             {filteredEvents.map((event) => (
               <div
                 key={event.id}
-                className={`px-4 py-3 border-l-4 cursor-pointer hover:bg-gray-50 transition-colors ${getEventColor(event.type)}`}
+                className={`px-4 py-3 border-l-4 cursor-pointer hover:bg-slate-800/50 transition-colors ${getEventColor(event.type)}`}
                 onClick={() => {
                   setSelectedEvent(event);
                   onEventClick?.(event);
@@ -334,26 +332,30 @@ export function ActivityFeed({
                     {getEventIcon(event.type)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900 truncate">{event.message}</p>
+                    <p className="text-sm text-slate-200 truncate">{event.message}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-gray-500">{formatTime(event.timestamp)}</span>
+                      <span className="text-xs text-slate-500 font-mono">{formatTime(event.timestamp)}</span>
                       {event.source_name && (
                         <>
-                          <span className="text-gray-300">·</span>
-                          <span className="text-xs text-gray-500">{event.source_name}</span>
+                          <span className="text-slate-600">·</span>
+                          <span className="text-xs text-slate-500">{event.source_name}</span>
                         </>
                       )}
                       {event.details?.confidence !== undefined && (
                         <>
-                          <span className="text-gray-300">·</span>
-                          <span className={`text-xs ${event.details.confidence >= 0.8 ? 'text-green-600' : event.details.confidence >= 0.5 ? 'text-yellow-600' : 'text-red-600'}`}>
-                            {Math.round(event.details.confidence * 100)}% conf
+                          <span className="text-slate-600">·</span>
+                          <span className={`text-xs font-mono ${
+                            event.details.confidence >= 0.8 ? 'text-emerald-400' :
+                            event.details.confidence >= 0.5 ? 'text-amber-400' :
+                            'text-red-400'
+                          }`}>
+                            {Math.round(event.details.confidence * 100)}%
                           </span>
                         </>
                       )}
                     </div>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                  <ChevronRight className="w-4 h-4 text-slate-600 flex-shrink-0" />
                 </div>
               </div>
             ))}
@@ -363,39 +365,39 @@ export function ActivityFeed({
 
       {/* Event Detail Modal */}
       {selectedEvent && (
-        <div className="absolute inset-0 bg-black/20 flex items-center justify-center z-10">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
+        <div className="absolute inset-0 bg-slate-900/80 flex items-center justify-center z-10">
+          <div className="bg-slate-800 border border-slate-700 rounded shadow-xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700 bg-slate-900/50">
               <div className="flex items-center gap-2">
                 {getEventIcon(selectedEvent.type)}
-                <h4 className="font-medium text-gray-900">Event Details</h4>
+                <h4 className="font-medium text-slate-100 text-sm uppercase tracking-wide">Event Details</h4>
               </div>
               <button
                 onClick={() => setSelectedEvent(null)}
-                className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                className="p-1 text-slate-400 hover:text-slate-200 rounded transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-4 space-y-3">
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Message</p>
-                <p className="text-sm text-gray-900">{selectedEvent.message}</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wide font-mono">Message</p>
+                <p className="text-sm text-slate-200">{selectedEvent.message}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Time</p>
-                <p className="text-sm text-gray-900">{new Date(selectedEvent.timestamp).toLocaleString()}</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wide font-mono">Time</p>
+                <p className="text-sm text-slate-200 font-mono">{new Date(selectedEvent.timestamp).toLocaleString()}</p>
               </div>
               {selectedEvent.source_name && (
                 <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide">Source</p>
-                  <p className="text-sm text-gray-900">{selectedEvent.source_name}</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wide font-mono">Source</p>
+                  <p className="text-sm text-slate-200">{selectedEvent.source_name}</p>
                 </div>
               )}
               {selectedEvent.details && (
                 <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide">Details</p>
-                  <pre className="mt-1 p-2 bg-gray-50 rounded text-xs text-gray-700 overflow-x-auto">
+                  <p className="text-xs text-slate-500 uppercase tracking-wide font-mono">Details</p>
+                  <pre className="mt-1 p-2 bg-slate-900 border border-slate-700 rounded text-xs text-slate-300 font-mono overflow-x-auto">
                     {JSON.stringify(selectedEvent.details, null, 2)}
                   </pre>
                 </div>
@@ -423,20 +425,20 @@ export function ActivityFeedCompact({ maxEvents = 5 }: { maxEvents?: number }) {
     switch (type) {
       case 'extraction_found':
       case 'extraction_stored':
-        return <Bot className="w-3.5 h-3.5 text-purple-500" />;
+        return <Bot className="w-3.5 h-3.5 text-purple-400" />;
       case 'crawl_completed':
-        return <CheckCircle className="w-3.5 h-3.5 text-green-500" />;
+        return <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />;
       case 'error':
-        return <AlertCircle className="w-3.5 h-3.5 text-red-500" />;
+        return <AlertCircle className="w-3.5 h-3.5 text-red-400" />;
       default:
-        return <Clock className="w-3.5 h-3.5 text-gray-400" />;
+        return <Clock className="w-3.5 h-3.5 text-slate-500" />;
     }
   };
 
   return (
     <div className="space-y-2">
       {events.map((event) => (
-        <div key={event.id} className="flex items-center gap-2 text-xs text-gray-600">
+        <div key={event.id} className="flex items-center gap-2 text-xs text-slate-400">
           {getEventIcon(event.type)}
           <span className="truncate flex-1">{event.message}</span>
         </div>

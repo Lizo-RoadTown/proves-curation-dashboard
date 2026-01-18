@@ -1,5 +1,5 @@
 /**
- * KnowledgeMap - Tile grid for navigating knowledge categories
+ * KnowledgeMap - Mission Control tile grid for knowledge categories
  *
  * Categories are stable and intentionally few:
  * - Procedures: Ops runbooks, checklists
@@ -19,6 +19,7 @@ export interface KnowledgeTile {
   count: number;
   color: string;
   bgColor: string;
+  borderColor?: string;
 }
 
 // Default tiles - these map to entity_type categories
@@ -29,8 +30,9 @@ export const DEFAULT_TILES: KnowledgeTile[] = [
     description: "Ops runbooks, checklists",
     icon: FileText,
     count: 0,
-    color: "text-blue-600",
-    bgColor: "bg-blue-500",
+    color: "text-blue-400",
+    bgColor: "bg-blue-500/20",
+    borderColor: "border-blue-500/30",
   },
   {
     id: "architecture",
@@ -38,8 +40,9 @@ export const DEFAULT_TILES: KnowledgeTile[] = [
     description: "System/Software/Hardware design",
     icon: Cpu,
     count: 0,
-    color: "text-purple-600",
-    bgColor: "bg-purple-500",
+    color: "text-purple-400",
+    bgColor: "bg-purple-500/20",
+    borderColor: "border-purple-500/30",
   },
   {
     id: "interfaces",
@@ -47,8 +50,9 @@ export const DEFAULT_TILES: KnowledgeTile[] = [
     description: "ICDs, ports, component links",
     icon: Link2,
     count: 0,
-    color: "text-green-600",
-    bgColor: "bg-green-500",
+    color: "text-emerald-400",
+    bgColor: "bg-emerald-500/20",
+    borderColor: "border-emerald-500/30",
   },
   {
     id: "decisions",
@@ -56,8 +60,9 @@ export const DEFAULT_TILES: KnowledgeTile[] = [
     description: "ADRs, trade studies",
     icon: Lightbulb,
     count: 0,
-    color: "text-yellow-600",
-    bgColor: "bg-yellow-500",
+    color: "text-amber-400",
+    bgColor: "bg-amber-500/20",
+    borderColor: "border-amber-500/30",
   },
   {
     id: "lessons",
@@ -65,8 +70,9 @@ export const DEFAULT_TILES: KnowledgeTile[] = [
     description: "Post-mortems, gotchas",
     icon: AlertTriangle,
     count: 0,
-    color: "text-red-600",
-    bgColor: "bg-red-500",
+    color: "text-red-400",
+    bgColor: "bg-red-500/20",
+    borderColor: "border-red-500/30",
   },
 ];
 
@@ -80,7 +86,7 @@ export function KnowledgeMap({ tiles, onSelectTile, loading = false }: Knowledge
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-slate-500" />
       </div>
     );
   }
@@ -93,16 +99,16 @@ export function KnowledgeMap({ tiles, onSelectTile, loading = false }: Knowledge
           <button
             key={tile.id}
             onClick={() => onSelectTile(tile.id)}
-            className="flex items-start gap-4 p-5 bg-white border border-gray-200 rounded-xl hover:border-blue-300 hover:shadow-md transition-all text-left group"
+            className={`flex items-start gap-4 p-5 bg-slate-800/50 border ${tile.borderColor || 'border-slate-700'} rounded hover:bg-slate-800/80 hover:border-blue-500/50 transition-all text-left group`}
           >
-            <div className={`p-3 rounded-xl ${tile.bgColor} group-hover:scale-110 transition-transform`}>
-              <Icon className="w-6 h-6 text-white" />
+            <div className={`p-3 rounded ${tile.bgColor} border ${tile.borderColor || 'border-slate-700'} group-hover:scale-110 transition-transform`}>
+              <Icon className={`w-6 h-6 ${tile.color}`} />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-gray-900">{tile.title}</h3>
-              <p className="text-sm text-gray-500 mt-1">{tile.description}</p>
-              <p className="text-sm font-medium text-gray-700 mt-2">
-                {tile.count.toLocaleString()} items
+              <h3 className="font-semibold text-slate-100">{tile.title}</h3>
+              <p className="text-xs text-slate-500 mt-1 font-mono uppercase">{tile.description}</p>
+              <p className="text-sm font-mono font-medium text-slate-300 mt-2">
+                {tile.count.toLocaleString()} <span className="text-slate-500">items</span>
               </p>
             </div>
           </button>
@@ -133,19 +139,19 @@ export function KnowledgeMapCompact({
           <button
             key={tile.id}
             onClick={() => onSelectTile(tile.id)}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded text-left transition-colors ${
               isSelected
-                ? "bg-blue-50 border border-blue-200"
-                : "hover:bg-gray-50 border border-transparent"
+                ? "bg-blue-500/20 border border-blue-500/50"
+                : "hover:bg-slate-800 border border-transparent"
             }`}
           >
-            <div className={`p-1.5 rounded-lg ${tile.bgColor}`}>
-              <Icon className="w-4 h-4 text-white" />
+            <div className={`p-1.5 rounded ${tile.bgColor} border ${tile.borderColor || 'border-slate-700'}`}>
+              <Icon className={`w-4 h-4 ${tile.color}`} />
             </div>
             <div className="flex-1 min-w-0">
-              <span className="text-sm font-medium text-gray-900">{tile.title}</span>
+              <span className="text-sm font-medium text-slate-200">{tile.title}</span>
             </div>
-            <span className="text-xs text-gray-500">{tile.count}</span>
+            <span className="text-xs text-slate-500 font-mono">{tile.count}</span>
           </button>
         );
       })}

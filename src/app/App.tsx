@@ -1,3 +1,9 @@
+/**
+ * App - Mission Control Main Application
+ *
+ * Dark theme with 2-surface architecture: Library + Admin
+ */
+
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { Header } from "./components/Header";
@@ -25,10 +31,10 @@ export default function App() {
   // Show loading spinner while checking auth state (skip in dev mode)
   if (loading && !DEV_SKIP_AUTH) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          <p className="text-sm text-gray-600">Loading...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+          <p className="text-sm text-slate-400 font-mono uppercase">Initializing...</p>
         </div>
       </div>
     );
@@ -43,10 +49,10 @@ export default function App() {
   }
 
   // User is authenticated (or dev mode) - show main app
-  const teams = ["PROVES Lab", "CubeSat Team", "Research Group"]; // TODO: Fetch from team_members
+  const teams = ["PROVES Lab", "CubeSat Team", "Research Group"];
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || "Dev User";
-  const userRole = "lead"; // TODO: Fetch from user_roles table (lead = can see Admin)
-  const pendingCount = 0; // TODO: Fetch from Supabase
+  const userRole = "lead";
+  const pendingCount = 0;
 
   const handleNavigate = (surface: string) => {
     setCurrentSurface(surface as Surface);
@@ -65,7 +71,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-900">
       <Header
         currentTeam={currentTeam}
         userRole={userRole}
@@ -82,7 +88,7 @@ export default function App() {
           onNavigate={handleNavigate}
           userRole={userRole}
         />
-        <main className="flex-1 overflow-hidden">
+        <main className="flex-1 overflow-hidden bg-slate-900">
           {currentSurface === "library" && <LibraryView />}
           {currentSurface === "admin" && <AdminView />}
         </main>

@@ -1,11 +1,13 @@
 /**
- * LibraryView - Main Library surface with search + Knowledge Map
+ * LibraryView - Mission Control Library Interface
  *
  * Layout:
  * - Search bar (always prominent)
  * - Facet filters (Mission, Team, Domain, Artifact type)
+ * - 3D Knowledge Graph visualization
  * - Knowledge Map tiles (few, stable categories)
- * - TileIndexView when a tile is selected
+ *
+ * Dark theme with mission control aesthetic.
  */
 
 import { useState, useCallback, useEffect } from "react";
@@ -16,7 +18,18 @@ import { TileIndexView, type IndexEntity } from "./TileIndexView";
 import { Graph3D } from "@/app/components/Graph3D";
 import { useLibrary } from "@/hooks/useLibrary";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Search, AlertCircle, Network, Users, Layers, BookOpen, Lightbulb } from "lucide-react";
+import {
+  Loader2,
+  Search,
+  AlertCircle,
+  Network,
+  Users,
+  Layers,
+  BookOpen,
+  Lightbulb,
+  Database,
+  GitBranch,
+} from "lucide-react";
 
 // Stats types
 interface DomainStats {
@@ -64,13 +77,11 @@ export function LibraryView() {
   useEffect(() => {
     async function loadStats() {
       try {
-        // Get entity counts by domain
         const { data: domainData } = await supabase
           .from('core_entities')
           .select('attributes')
           .not('attributes', 'is', null);
 
-        // Get entity counts by organization
         const { data: orgData } = await supabase
           .from('core_entities')
           .select(`
@@ -82,19 +93,16 @@ export function LibraryView() {
             )
           `);
 
-        // Get total edges
         const { count: edgeCount } = await supabase
           .from('core_equivalences')
           .select('*', { count: 'exact', head: true });
 
-        // Process domain stats
         const domainCounts: Record<string, number> = {};
         (domainData || []).forEach((e: any) => {
           const domain = e.attributes?.domain || 'unknown';
           domainCounts[domain] = (domainCounts[domain] || 0) + 1;
         });
 
-        // Process org stats
         const orgCounts: Record<string, { name: string; color: string; count: number }> = {};
         (orgData || []).forEach((e: any) => {
           const org = e.organizations;
@@ -124,9 +132,6 @@ export function LibraryView() {
     loadStats();
   }, []);
 
-  /**
-   * Handle search
-   */
   const handleSearch = useCallback(
     async (query: string) => {
       await search(query, filters);
@@ -134,9 +139,6 @@ export function LibraryView() {
     [search, filters]
   );
 
-  /**
-   * Handle tile selection
-   */
   const handleSelectTile = useCallback(
     async (tileId: string) => {
       setSelectedTile(tileId);
@@ -145,11 +147,7 @@ export function LibraryView() {
     [loadTileEntities, filters]
   );
 
-  /**
-   * Handle entity selection (could open detail view)
-   */
   const handleSelectEntity = useCallback((entity: IndexEntity) => {
-    // For now, open source URL if available
     if (entity.sourceUrl) {
       window.open(entity.sourceUrl, "_blank");
     }
@@ -172,11 +170,14 @@ export function LibraryView() {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col bg-slate-900">
       {/* Header */}
-      <div className="p-6 border-b bg-white">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Library</h1>
-        <p className="text-gray-600 mb-6">
+      <div className="p-6 border-b border-slate-700 bg-slate-900">
+        <div className="flex items-center gap-3 mb-2">
+          <Database className="w-6 h-6 text-blue-400" />
+          <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Knowledge Library</h1>
+        </div>
+        <p className="text-slate-400 mb-6">
           Search and explore the collective knowledge base
         </p>
 
@@ -190,16 +191,16 @@ export function LibraryView() {
       </div>
 
       {/* Facets */}
-      <div className="px-6 py-4 border-b bg-gray-50">
+      <div className="px-6 py-4 border-b border-slate-700 bg-slate-800/50">
         <Facets filters={filters} onChange={setFilters} />
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-6 bg-slate-900">
         {/* Error */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
-            <AlertCircle className="w-5 h-5" />
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded flex items-center gap-3 text-red-300">
+            <AlertCircle className="w-5 h-5 text-red-400" />
             {error}
           </div>
         )}
@@ -207,10 +208,10 @@ export function LibraryView() {
         {/* Search Results */}
         {searchQuery && (
           <div className="mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Search className="w-5 h-5" />
+            <h2 className="text-sm font-semibold text-slate-100 mb-4 flex items-center gap-2 uppercase tracking-wide">
+              <Search className="w-4 h-4 text-blue-400" />
               Search Results
-              {searchLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {searchLoading && <Loader2 className="w-4 h-4 animate-spin text-blue-400" />}
             </h2>
 
             {searchResults.length > 0 ? (
@@ -219,25 +220,25 @@ export function LibraryView() {
                   <div
                     key={entity.id}
                     onClick={() => handleSelectEntity(entity)}
-                    className="p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-300 cursor-pointer transition-colors"
+                    className="p-4 bg-slate-800/50 border border-slate-700 rounded hover:border-blue-500/50 cursor-pointer transition-all"
                   >
-                    <h3 className="font-medium text-gray-900">{entity.name}</h3>
+                    <h3 className="font-medium text-slate-200">{entity.name}</h3>
                     {entity.excerpt && (
-                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                      <p className="text-sm text-slate-400 mt-1 line-clamp-2">
                         {entity.excerpt}
                       </p>
                     )}
-                    <div className="flex gap-3 mt-2 text-sm text-gray-500">
-                      <span className="px-2 py-0.5 bg-gray-100 rounded">
+                    <div className="flex gap-3 mt-2 text-sm">
+                      <span className="px-2 py-0.5 bg-slate-700 text-slate-300 rounded font-mono text-xs uppercase">
                         {entity.type}
                       </span>
-                      <span>{entity.domain}</span>
+                      <span className="text-slate-500">{entity.domain}</span>
                     </div>
                   </div>
                 ))}
               </div>
             ) : !searchLoading ? (
-              <p className="text-gray-500">No results found for "{searchQuery}"</p>
+              <p className="text-slate-500 font-mono text-sm">NO RESULTS FOR "{searchQuery.toUpperCase()}"</p>
             ) : null}
           </div>
         )}
@@ -248,38 +249,59 @@ export function LibraryView() {
         <div className="mb-8">
           {/* Section Header */}
           <div className="mb-6">
-            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Network className="w-6 h-6 text-blue-600" />
+            <h2 className="text-lg font-semibold text-slate-100 flex items-center gap-2 uppercase tracking-wide">
+              <Network className="w-5 h-5 text-blue-400" />
               Shared Community Knowledge
             </h2>
-            <p className="text-gray-600 mt-1">
-              All verified knowledge from all teams is accessible to you. Your team's contributions are highlighted in the graph.
+            <p className="text-slate-400 mt-1 text-sm">
+              All verified knowledge from all teams. Your team's contributions are highlighted in the graph.
             </p>
           </div>
 
+          {/* Stats Summary Bar */}
+          <div className="flex items-center gap-6 mb-6 p-4 bg-slate-800/30 border border-slate-700 rounded">
+            <div className="flex items-center gap-2">
+              <Database className="w-4 h-4 text-blue-400" />
+              <span className="text-2xl font-mono font-bold text-slate-100">{stats?.totalEntities || 0}</span>
+              <span className="text-xs text-slate-500 uppercase">Entities</span>
+            </div>
+            <div className="w-px h-8 bg-slate-700" />
+            <div className="flex items-center gap-2">
+              <GitBranch className="w-4 h-4 text-purple-400" />
+              <span className="text-2xl font-mono font-bold text-slate-100">{stats?.totalEdges || 0}</span>
+              <span className="text-xs text-slate-500 uppercase">Edges</span>
+            </div>
+            <div className="w-px h-8 bg-slate-700" />
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-emerald-400" />
+              <span className="text-2xl font-mono font-bold text-slate-100">{stats?.byOrg.length || 0}</span>
+              <span className="text-xs text-slate-500 uppercase">Teams</span>
+            </div>
+          </div>
+
           {/* 3D Graph */}
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm mb-6">
+          <div className="bg-slate-800/50 border border-slate-700 rounded overflow-hidden mb-6">
             <Graph3D />
           </div>
 
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             {/* By Domain */}
-            <div className="bg-white border border-gray-200 rounded-xl p-5">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-purple-600" />
+            <div className="bg-slate-800/50 border border-slate-700 rounded p-5">
+              <h3 className="text-sm font-semibold text-slate-100 mb-4 flex items-center gap-2 uppercase tracking-wide">
+                <Layers className="w-4 h-4 text-purple-400" />
                 By Domain
               </h3>
               {statsLoading ? (
                 <div className="flex items-center justify-center py-4">
-                  <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                  <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
                   {stats?.byDomain.map((d) => (
-                    <div key={d.domain} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <span className="text-sm text-gray-700 capitalize">{d.domain}</span>
-                      <span className="text-lg font-bold text-gray-900">{d.count}</span>
+                    <div key={d.domain} className="flex items-center justify-between p-3 bg-slate-900/50 border border-slate-700 rounded">
+                      <span className="text-sm text-slate-300 uppercase font-mono">{d.domain}</span>
+                      <span className="text-lg font-mono font-bold text-slate-100">{d.count}</span>
                     </div>
                   ))}
                 </div>
@@ -287,27 +309,27 @@ export function LibraryView() {
             </div>
 
             {/* Contributing Teams */}
-            <div className="bg-white border border-gray-200 rounded-xl p-5">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Users className="w-4 h-4 text-green-600" />
+            <div className="bg-slate-800/50 border border-slate-700 rounded p-5">
+              <h3 className="text-sm font-semibold text-slate-100 mb-4 flex items-center gap-2 uppercase tracking-wide">
+                <Users className="w-4 h-4 text-emerald-400" />
                 Contributing Teams
               </h3>
               {statsLoading ? (
                 <div className="flex items-center justify-center py-4">
-                  <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                  <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
                 </div>
               ) : (
                 <div className="space-y-2">
                   {stats?.byOrg.map((org) => (
-                    <div key={org.name} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={org.name} className="flex items-center justify-between p-3 bg-slate-900/50 border border-slate-700 rounded">
                       <div className="flex items-center gap-2">
                         <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: org.color }}
+                          className="w-3 h-3 rounded-full shadow-[0_0_6px]"
+                          style={{ backgroundColor: org.color, boxShadow: `0 0 6px ${org.color}50` }}
                         />
-                        <span className="text-sm text-gray-700">{org.name}</span>
+                        <span className="text-sm text-slate-300">{org.name}</span>
                       </div>
-                      <span className="text-lg font-bold text-gray-900">{org.count}</span>
+                      <span className="text-lg font-mono font-bold text-slate-100">{org.count}</span>
                     </div>
                   ))}
                 </div>
@@ -316,37 +338,37 @@ export function LibraryView() {
           </div>
 
           {/* How the Knowledge Graph Works */}
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5 mb-6">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-blue-600" />
+          <div className="bg-blue-500/10 border border-blue-500/30 rounded p-5 mb-6">
+            <h3 className="text-sm font-semibold text-slate-100 mb-3 flex items-center gap-2 uppercase tracking-wide">
+              <BookOpen className="w-4 h-4 text-blue-400" />
               How the Knowledge Graph Works
             </h3>
-            <p className="text-sm text-gray-700 leading-relaxed">
-              Each <strong>node</strong> represents a component, system, or procedure.{" "}
-              <strong>Edges</strong> represent knowledge couplings — how things connect, depend on, or flow to each other.
-              Edge thickness shows coupling strength. Your team's contributions are highlighted with their organization color.
+            <p className="text-sm text-slate-300 leading-relaxed">
+              Each <span className="text-blue-300 font-medium">node</span> represents a component, system, or procedure.{" "}
+              <span className="text-purple-300 font-medium">Edges</span> represent knowledge couplings — how things connect, depend on, or flow to each other.
+              Edge thickness shows coupling strength. Team contributions are highlighted with their organization color.
             </p>
-            <p className="text-sm text-gray-700 mt-3 leading-relaxed">
-              <em>This is the collective brain.</em> The more teams contribute, the more complete our shared understanding becomes.
+            <p className="text-sm text-slate-400 mt-3 leading-relaxed font-mono text-xs">
+              THE COLLECTIVE BRAIN — MORE TEAMS = MORE COMPLETE UNDERSTANDING
             </p>
           </div>
 
           {/* Want to contribute more? */}
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-5">
-            <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-              <Lightbulb className="w-4 h-4 text-green-600" />
-              Want to contribute more?
+          <div className="bg-emerald-500/10 border border-emerald-500/30 rounded p-5">
+            <h3 className="text-sm font-semibold text-slate-100 mb-2 flex items-center gap-2 uppercase tracking-wide">
+              <Lightbulb className="w-4 h-4 text-emerald-400" />
+              Contribute More
             </h3>
-            <p className="text-sm text-gray-700">
-              Add more sources in the <strong>Admin</strong> view. Your verified extractions automatically flow to the
-              shared library and appear in the graph as new nodes and edges.
+            <p className="text-sm text-slate-300">
+              Add more sources in the <span className="text-emerald-300 font-medium">Admin</span> view.
+              Verified extractions automatically flow to the shared library and appear in the graph.
             </p>
           </div>
         </div>
 
         {/* Knowledge Map */}
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          <h2 className="text-sm font-semibold text-slate-100 mb-4 uppercase tracking-wide">
             Knowledge Map
           </h2>
           <KnowledgeMap

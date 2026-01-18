@@ -1,8 +1,10 @@
 /**
- * Facets - Filter controls for Mission, Team, Domain, and Artifact type
+ * Facets - Mission Control filter controls
+ *
+ * Dark theme with monospace labels.
  */
 
-import { Filter } from "lucide-react";
+import { Filter, X } from "lucide-react";
 
 export interface FacetFilters {
   mission: string;
@@ -21,35 +23,35 @@ interface FacetsProps {
 }
 
 const DEFAULT_MISSIONS = [
-  { value: "all", label: "All Missions" },
+  { value: "all", label: "ALL MISSIONS" },
   { value: "proves1", label: "PROVES-1" },
   { value: "proves2", label: "PROVES-2" },
   { value: "proves3", label: "PROVES-3" },
 ];
 
 const DEFAULT_TEAMS = [
-  { value: "all", label: "All Teams" },
-  { value: "software", label: "Software Team" },
-  { value: "hardware", label: "Hardware Team" },
-  { value: "ops", label: "Operations" },
-  { value: "ground", label: "Ground Station" },
+  { value: "all", label: "ALL TEAMS" },
+  { value: "software", label: "SOFTWARE" },
+  { value: "hardware", label: "HARDWARE" },
+  { value: "ops", label: "OPERATIONS" },
+  { value: "ground", label: "GROUND STATION" },
 ];
 
 const DEFAULT_DOMAINS = [
-  { value: "all", label: "All Domains" },
-  { value: "ops", label: "Ops" },
-  { value: "software", label: "Software" },
-  { value: "hardware", label: "Hardware" },
-  { value: "process", label: "Process" },
+  { value: "all", label: "ALL DOMAINS" },
+  { value: "ops", label: "OPS" },
+  { value: "software", label: "SOFTWARE" },
+  { value: "hardware", label: "HARDWARE" },
+  { value: "process", label: "PROCESS" },
 ];
 
 const DEFAULT_ARTIFACTS = [
-  { value: "all", label: "All Types" },
-  { value: "procedure", label: "Procedures" },
-  { value: "component", label: "Components" },
-  { value: "interface", label: "Interfaces" },
-  { value: "decision", label: "Decisions" },
-  { value: "lesson", label: "Lessons" },
+  { value: "all", label: "ALL TYPES" },
+  { value: "procedure", label: "PROCEDURES" },
+  { value: "component", label: "COMPONENTS" },
+  { value: "interface", label: "INTERFACES" },
+  { value: "decision", label: "DECISIONS" },
+  { value: "lesson", label: "LESSONS" },
 ];
 
 export function Facets({
@@ -79,9 +81,11 @@ export function Facets({
     });
   };
 
+  const selectClasses = "px-3 py-2 text-xs font-mono bg-slate-800 border border-slate-700 text-slate-300 rounded hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors";
+
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <div className="flex items-center gap-2 text-sm text-gray-500">
+      <div className="flex items-center gap-2 text-xs text-slate-500 font-mono uppercase">
         <Filter className="w-4 h-4" />
         <span>Filters:</span>
       </div>
@@ -89,7 +93,7 @@ export function Facets({
       <select
         value={filters.mission}
         onChange={(e) => updateFilter("mission", e.target.value)}
-        className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className={selectClasses}
       >
         {missionOptions.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -101,7 +105,7 @@ export function Facets({
       <select
         value={filters.team}
         onChange={(e) => updateFilter("team", e.target.value)}
-        className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className={selectClasses}
       >
         {teamOptions.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -113,7 +117,7 @@ export function Facets({
       <select
         value={filters.domain}
         onChange={(e) => updateFilter("domain", e.target.value)}
-        className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className={selectClasses}
       >
         {domainOptions.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -125,7 +129,7 @@ export function Facets({
       <select
         value={filters.artifactType}
         onChange={(e) => updateFilter("artifactType", e.target.value)}
-        className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className={selectClasses}
       >
         {artifactOptions.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -137,9 +141,10 @@ export function Facets({
       {hasActiveFilters && (
         <button
           onClick={clearFilters}
-          className="px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg"
+          className="flex items-center gap-1 px-3 py-2 text-xs font-mono text-blue-400 hover:text-blue-300 hover:bg-slate-800 rounded transition-colors"
         >
-          Clear all
+          <X className="w-3 h-3" />
+          CLEAR
         </button>
       )}
     </div>
