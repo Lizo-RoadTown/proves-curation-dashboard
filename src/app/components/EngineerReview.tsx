@@ -24,26 +24,10 @@ import {
   XCircle,
   AlertTriangle,
   ExternalLink,
-  ArrowRight,
-  HelpCircle,
   ThumbsUp,
   ThumbsDown,
-  MessageSquare,
-  Eye,
-  Database,
-  Link2,
-  Clock,
-  Timer,
-  User,
-  RotateCw,
   ChevronDown,
   ChevronUp,
-  Plus,
-  Network,
-  Sparkles,
-  AlertCircle,
-  RefreshCw,
-  Users,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/app/components/ui/collapsible";
 import type { ReviewExtractionDTO } from "@/types/review";
@@ -61,8 +45,6 @@ export const CAPTURE_QUESTIONS = [
     num: 1,
     question: "Who figured this out?",
     engineerPrompt: "Was this learned from testing, from docs, or does someone just know it?",
-    icon: Eye,
-    color: "border-blue-200 bg-blue-50",
     options: [
       { value: "hands_on", label: "Hands-on testing/experience", contact: 0.9 },
       { value: "someone_knows", label: "Someone on the team knows this", contact: 0.7 },
@@ -76,8 +58,6 @@ export const CAPTURE_QUESTIONS = [
     num: 2,
     question: "Where does this knowledge live?",
     engineerPrompt: "Is this written down, or does someone just know it?",
-    icon: Database,
-    color: "border-purple-200 bg-purple-50",
     options: [
       { value: "documented", label: "Written in docs/wiki/readme" },
       { value: "in_code", label: "In the code (comments, config)" },
@@ -91,8 +71,6 @@ export const CAPTURE_QUESTIONS = [
     num: 3,
     question: "What else does this connect to?",
     engineerPrompt: "Add any components/systems this depends on or affects",
-    icon: Link2,
-    color: "border-green-200 bg-green-50",
     freeform: true,
     placeholder: "e.g., I2C bus, power system, thermal manager...",
   },
@@ -101,8 +79,6 @@ export const CAPTURE_QUESTIONS = [
     num: 4,
     question: "When is this true?",
     engineerPrompt: "What conditions or assumptions need to hold?",
-    icon: Clock,
-    color: "border-yellow-200 bg-yellow-50",
     freeform: true,
     placeholder: "e.g., Only at room temp, only with firmware v2.1, only on rev C boards...",
   },
@@ -111,8 +87,6 @@ export const CAPTURE_QUESTIONS = [
     num: 5,
     question: "How current is this?",
     engineerPrompt: "Does this age out or need rechecking?",
-    icon: Timer,
-    color: "border-orange-200 bg-orange-50",
     options: [
       { value: "stable", label: "Stable - unlikely to change" },
       { value: "per_release", label: "Check each release/version" },
@@ -126,8 +100,6 @@ export const CAPTURE_QUESTIONS = [
     num: 6,
     question: "Who would know more?",
     engineerPrompt: "Who wrote this or who's the expert?",
-    icon: User,
-    color: "border-indigo-200 bg-indigo-50",
     freeform: true,
     placeholder: "e.g., Sarah (thermal lead), the F' team, hardware docs...",
   },
@@ -136,8 +108,6 @@ export const CAPTURE_QUESTIONS = [
     num: 7,
     question: "Do you need to DO this to understand it?",
     engineerPrompt: "Can you learn this from reading, or do you need hands-on practice?",
-    icon: RotateCw,
-    color: "border-red-200 bg-red-50",
     options: [
       { value: "readable", label: "Can learn from docs/code" },
       { value: "demo", label: "Need a demo or walkthrough" },
@@ -234,162 +204,160 @@ export function EngineerReview({
   const allAccuracyAnswered = Object.values(accuracyChecks).every(v => v !== null);
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
+    <div className="max-w-4xl mx-auto p-6 space-y-6 bg-[#0f172a] min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={onBack}>
+        <Button variant="ghost" onClick={onBack} className="text-[#cbd5e1] hover:text-[#e2e8f0] hover:bg-[#1e293b]">
           ← Back to Queue
         </Button>
-        <Badge variant="outline" className={lineage.verified ? "border-green-200 bg-green-50" : "border-yellow-200 bg-yellow-50"}>
+        <Badge variant="outline" className={lineage.verified ? "border-[#334155] bg-[#1e293b] text-[#cbd5e1]" : "border-[#334155] bg-[#1e293b] text-[#94a3b8]"}>
           {lineage.verified ? "Source Verified" : "Unverified Source"}
         </Badge>
       </div>
 
       {/* SIDE-BY-SIDE COMPARISON: Extractor vs Human */}
-      <Card className="p-6">
+      <Card className="p-6 bg-[#1e293b]/50 border-[#334155]">
         <div className="flex items-center gap-2 mb-4">
-          <h2 className="text-lg font-semibold">Extractor vs Human</h2>
-          <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+          <h2 className="text-lg font-semibold text-[#e2e8f0]">Extractor vs Human</h2>
+          <Badge variant="outline" className="text-xs bg-[#334155] text-[#cbd5e1] border-[#334155]">
             Training Data
           </Badge>
         </div>
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-[#94a3b8] mb-4">
           Left: What the AI extracted. Right: Your corrections (or confirm if correct).
         </p>
 
         <div className="grid grid-cols-2 gap-4">
           {/* LEFT: Extractor Output (Read-Only) */}
-          <div className="border rounded-lg p-4 bg-slate-50">
+          <div className="border border-[#334155] rounded-lg p-4 bg-[#1e293b]">
             <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="h-4 w-4 text-purple-500" />
-              <span className="text-sm font-semibold text-purple-700">AI Extractor Found</span>
+              <span className="text-sm font-semibold text-[#cbd5e1]">AI Extractor Found</span>
             </div>
 
             {isCoupling ? (
               <div className="space-y-3">
                 <div>
-                  <label className="text-xs text-gray-500 block mb-1">From Component</label>
-                  <div className="px-3 py-2 bg-blue-100 text-blue-800 rounded text-sm">
-                    {from as string || <span className="text-gray-400 italic">Not detected</span>}
+                  <label className="text-xs text-[#64748b] block mb-1">From Component</label>
+                  <div className="px-3 py-2 bg-[#334155] text-[#e2e8f0] rounded text-sm">
+                    {from as string || <span className="text-[#64748b] italic">Not detected</span>}
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 block mb-1">To Component</label>
-                  <div className="px-3 py-2 bg-purple-100 text-purple-800 rounded text-sm">
-                    {to as string || <span className="text-gray-400 italic">Not detected</span>}
+                  <label className="text-xs text-[#64748b] block mb-1">To Component</label>
+                  <div className="px-3 py-2 bg-[#334155] text-[#e2e8f0] rounded text-sm">
+                    {to as string || <span className="text-[#64748b] italic">Not detected</span>}
                   </div>
                 </div>
                 {via && (
                   <div>
-                    <label className="text-xs text-gray-500 block mb-1">Via Interface</label>
-                    <div className="px-3 py-2 bg-gray-100 text-gray-700 rounded text-sm">{via as string}</div>
+                    <label className="text-xs text-[#64748b] block mb-1">Via Interface</label>
+                    <div className="px-3 py-2 bg-[#334155] text-[#cbd5e1] rounded text-sm">{via as string}</div>
                   </div>
                 )}
                 {flow && (
                   <div>
-                    <label className="text-xs text-gray-500 block mb-1">What Flows</label>
-                    <div className="px-3 py-2 bg-gray-100 text-gray-700 rounded text-sm">{flow as string}</div>
+                    <label className="text-xs text-[#64748b] block mb-1">What Flows</label>
+                    <div className="px-3 py-2 bg-[#334155] text-[#cbd5e1] rounded text-sm">{flow as string}</div>
                   </div>
                 )}
               </div>
             ) : (
               <div className="space-y-3">
                 <div>
-                  <label className="text-xs text-gray-500 block mb-1">Name</label>
-                  <div className="px-3 py-2 bg-blue-100 text-blue-800 rounded text-sm">{extraction.candidate_key}</div>
+                  <label className="text-xs text-[#64748b] block mb-1">Name</label>
+                  <div className="px-3 py-2 bg-[#334155] text-[#e2e8f0] rounded text-sm">{extraction.candidate_key}</div>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 block mb-1">Type</label>
-                  <div className="px-3 py-2 bg-gray-100 text-gray-700 rounded text-sm">{extraction.candidate_type}</div>
+                  <label className="text-xs text-[#64748b] block mb-1">Type</label>
+                  <div className="px-3 py-2 bg-[#334155] text-[#cbd5e1] rounded text-sm">{extraction.candidate_type}</div>
                 </div>
                 {candidate_payload.description && (
                   <div>
-                    <label className="text-xs text-gray-500 block mb-1">Description</label>
-                    <div className="px-3 py-2 bg-gray-100 text-gray-700 rounded text-sm">{candidate_payload.description as string}</div>
+                    <label className="text-xs text-[#64748b] block mb-1">Description</label>
+                    <div className="px-3 py-2 bg-[#334155] text-[#cbd5e1] rounded text-sm">{candidate_payload.description as string}</div>
                   </div>
                 )}
               </div>
             )}
 
-            <div className="mt-3 pt-3 border-t border-gray-200">
-              <div className="flex items-center gap-2 text-xs text-gray-500">
+            <div className="mt-3 pt-3 border-t border-[#334155]">
+              <div className="flex items-center gap-2 text-xs text-[#64748b]">
                 <span>Confidence: {(confidence * 100).toFixed(0)}%</span>
               </div>
             </div>
           </div>
 
           {/* RIGHT: Human Corrections (Editable) */}
-          <div className="border rounded-lg p-4 bg-green-50 border-green-200">
+          <div className="border border-[#334155] rounded-lg p-4 bg-[#1e293b]">
             <div className="flex items-center gap-2 mb-3">
-              <User className="h-4 w-4 text-green-600" />
-              <span className="text-sm font-semibold text-green-700">Your Corrections</span>
+              <span className="text-sm font-semibold text-[#cbd5e1]">Your Corrections</span>
             </div>
 
             {isCoupling ? (
               <div className="space-y-3">
                 <div>
-                  <label className="text-xs text-gray-500 block mb-1">From Component</label>
+                  <label className="text-xs text-[#64748b] block mb-1">From Component</label>
                   <Input
                     placeholder={from as string || "Enter correct component..."}
                     value={corrections.from_component || ""}
                     onChange={(e) => setCorrections(prev => ({ ...prev, from_component: e.target.value }))}
-                    className="bg-white text-sm"
+                    className="text-sm"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 block mb-1">To Component</label>
+                  <label className="text-xs text-[#64748b] block mb-1">To Component</label>
                   <Input
                     placeholder={to as string || "Enter correct component..."}
                     value={corrections.to_component || ""}
                     onChange={(e) => setCorrections(prev => ({ ...prev, to_component: e.target.value }))}
-                    className="bg-white text-sm"
+                    className="text-sm"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 block mb-1">Via Interface</label>
+                  <label className="text-xs text-[#64748b] block mb-1">Via Interface</label>
                   <Input
                     placeholder={via as string || "Enter interface..."}
                     value={corrections.via_interface || ""}
                     onChange={(e) => setCorrections(prev => ({ ...prev, via_interface: e.target.value }))}
-                    className="bg-white text-sm"
+                    className="text-sm"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 block mb-1">What Flows</label>
+                  <label className="text-xs text-[#64748b] block mb-1">What Flows</label>
                   <Input
                     placeholder={flow as string || "What data/signals flow?"}
                     value={corrections.flow || ""}
                     onChange={(e) => setCorrections(prev => ({ ...prev, flow: e.target.value }))}
-                    className="bg-white text-sm"
+                    className="text-sm"
                   />
                 </div>
               </div>
             ) : (
               <div className="space-y-3">
                 <div>
-                  <label className="text-xs text-gray-500 block mb-1">Name</label>
+                  <label className="text-xs text-[#64748b] block mb-1">Name</label>
                   <Input
                     placeholder={extraction.candidate_key}
                     value={corrections.name || ""}
                     onChange={(e) => setCorrections(prev => ({ ...prev, name: e.target.value }))}
-                    className="bg-white text-sm"
+                    className="text-sm"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 block mb-1">Description</label>
+                  <label className="text-xs text-[#64748b] block mb-1">Description</label>
                   <Textarea
                     placeholder={candidate_payload.description as string || "Add description..."}
                     value={corrections.description || ""}
                     onChange={(e) => setCorrections(prev => ({ ...prev, description: e.target.value }))}
-                    className="bg-white text-sm"
+                    className="text-sm"
                     rows={2}
                   />
                 </div>
               </div>
             )}
 
-            <div className="mt-3 pt-3 border-t border-green-200">
-              <p className="text-xs text-green-700">
+            <div className="mt-3 pt-3 border-t border-[#334155]">
+              <p className="text-xs text-[#64748b]">
                 Leave blank if extractor was correct. Only fill in corrections.
               </p>
             </div>
@@ -398,45 +366,45 @@ export function EngineerReview({
       </Card>
 
       {/* Evidence */}
-      <Card className="p-6">
+      <Card className="p-6 bg-[#1e293b]/50 border-[#334155]">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Evidence from Source</h2>
+          <h2 className="text-lg font-semibold text-[#e2e8f0]">Evidence from Source</h2>
           {snapshot.source_url && (
             <a
               href={snapshot.source_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+              className="text-sm text-[#94a3b8] hover:text-[#e2e8f0] flex items-center gap-1"
             >
               View Original <ExternalLink className="h-3 w-3" />
             </a>
           )}
         </div>
 
-        <div className="p-4 bg-blue-50 border-l-4 border-blue-400 rounded">
-          <p className="text-gray-800 italic">
+        <div className="p-4 bg-[#334155] border-l-4 border-[#06b6d4] rounded">
+          <p className="text-[#cbd5e1] italic">
             "{evidence.raw_text || "No evidence text available"}"
           </p>
         </div>
       </Card>
 
       {/* Technical Accuracy */}
-      <Card className="p-6">
-        <h2 className="text-lg font-semibold mb-4">Is this accurate?</h2>
+      <Card className="p-6 bg-[#1e293b]/50 border-[#334155]">
+        <h2 className="text-lg font-semibold text-[#e2e8f0] mb-4">Is this accurate?</h2>
         <div className="space-y-3">
           {[
             { id: "exists", question: "Does this actually exist?", description: "Is this real, not hallucinated?" },
             { id: "evidence", question: "Does the evidence support this?", description: "Does the quote say what the AI claims?" },
             { id: "accurate", question: "Are the details correct?", description: "Names, interfaces, behavior?" },
           ].map((item) => (
-            <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+            <div key={item.id} className="flex items-center gap-3 p-3 bg-[#334155]/50 rounded-lg">
               <div className="flex gap-1">
                 <button
                   onClick={() => setAccuracyChecks(prev => ({ ...prev, [item.id]: true }))}
                   className={`p-1.5 rounded ${
                     accuracyChecks[item.id] === true
-                      ? "bg-green-100 text-green-600 ring-2 ring-green-300"
-                      : "bg-white text-gray-400 hover:text-green-500"
+                      ? "bg-[#475569] text-green-400 ring-2 ring-green-500/50"
+                      : "bg-[#1e293b] text-[#64748b] hover:text-green-400"
                   }`}
                 >
                   <ThumbsUp className="h-4 w-4" />
@@ -445,16 +413,16 @@ export function EngineerReview({
                   onClick={() => setAccuracyChecks(prev => ({ ...prev, [item.id]: false }))}
                   className={`p-1.5 rounded ${
                     accuracyChecks[item.id] === false
-                      ? "bg-red-100 text-red-600 ring-2 ring-red-300"
-                      : "bg-white text-gray-400 hover:text-red-500"
+                      ? "bg-[#475569] text-red-400 ring-2 ring-red-500/50"
+                      : "bg-[#1e293b] text-[#64748b] hover:text-red-400"
                   }`}
                 >
                   <ThumbsDown className="h-4 w-4" />
                 </button>
               </div>
               <div>
-                <p className="font-medium text-gray-900">{item.question}</p>
-                <p className="text-sm text-gray-500">{item.description}</p>
+                <p className="font-medium text-[#e2e8f0]">{item.question}</p>
+                <p className="text-sm text-[#64748b]">{item.description}</p>
               </div>
             </div>
           ))}
@@ -462,86 +430,67 @@ export function EngineerReview({
       </Card>
 
       {/* WHY THIS MATTERS - GNN Explanation */}
-      <Card className="p-6 bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200">
-        <div className="flex items-start gap-4">
-          <div className="p-3 bg-indigo-100 rounded-lg">
-            <Network className="h-6 w-6 text-indigo-600" />
-          </div>
-          <div className="flex-1">
-            <h2 className="text-lg font-semibold text-indigo-900 mb-2">
-              Your Answers Power the Knowledge Graph
-            </h2>
-            <p className="text-sm text-indigo-800 mb-3">
-              This isn't busywork. Your metadata becomes <strong>edge features</strong> in a Graph Neural Network that helps the entire community.
-            </p>
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="flex items-center gap-2 text-indigo-700">
-                <Sparkles className="h-4 w-4" />
-                <span>Weights predictions by confidence</span>
-              </div>
-              <div className="flex items-center gap-2 text-indigo-700">
-                <AlertCircle className="h-4 w-4" />
-                <span>Flags knowledge at risk of loss</span>
-              </div>
-              <div className="flex items-center gap-2 text-indigo-700">
-                <RefreshCw className="h-4 w-4" />
-                <span>Triggers refresh when stale</span>
-              </div>
-              <div className="flex items-center gap-2 text-indigo-700">
-                <Users className="h-4 w-4" />
-                <span>Predicts onboarding difficulty</span>
-              </div>
-            </div>
+      <Card className="p-6 bg-[#1e293b]/50 border-[#334155]">
+        <div className="flex-1">
+          <h2 className="text-lg font-semibold text-[#e2e8f0] mb-2">
+            Your Answers Power the Knowledge Graph
+          </h2>
+          <p className="text-sm text-[#94a3b8] mb-3">
+            This isn't busywork. Your metadata becomes edge features in a Graph Neural Network that helps the entire community.
+          </p>
+          <div className="grid grid-cols-2 gap-3 text-xs text-[#64748b]">
+            <div>Weights predictions by confidence</div>
+            <div>Flags knowledge at risk of loss</div>
+            <div>Triggers refresh when stale</div>
+            <div>Predicts onboarding difficulty</div>
           </div>
         </div>
       </Card>
 
       {/* Knowledge Capture - The 7 Questions */}
-      <Card className="p-6">
+      <Card className="p-6 bg-[#1e293b]/50 border-[#334155]">
         <div className="flex items-center gap-2 mb-4">
-          <h2 className="text-lg font-semibold">Knowledge Metadata</h2>
-          <Badge variant="outline" className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200">
+          <h2 className="text-lg font-semibold text-[#e2e8f0]">Knowledge Metadata</h2>
+          <Badge variant="outline" className="text-xs bg-[#334155] text-[#cbd5e1] border-[#334155]">
             Feeds the Neural Network
           </Badge>
         </div>
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-[#94a3b8] mb-4">
           Answer what you know from your experience. Each answer becomes a signal the system learns from.
         </p>
 
         <div className="space-y-3">
           {CAPTURE_QUESTIONS.map((q) => {
-            const Icon = q.icon;
             const isExpanded = expandedQuestions[q.id];
             const hasAnswer = !!captureAnswers[q.id as keyof CaptureAnswers];
 
             return (
-              <div key={q.id} className={`border rounded-lg ${q.color}`}>
+              <div key={q.id} className="border border-[#334155] rounded-lg bg-[#1e293b]">
                 <button
                   onClick={() => toggleQuestion(q.id)}
                   className="w-full p-3 flex items-center justify-between text-left"
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className="h-4 w-4" />
                     <div>
-                      <span className="font-medium">{q.question}</span>
+                      <span className="font-medium text-[#e2e8f0]">{q.question}</span>
                       {hasAnswer && (
-                        <CheckCircle className="h-4 w-4 text-green-500 inline ml-2" />
+                        <CheckCircle className="h-4 w-4 text-green-400 inline ml-2" />
                       )}
                     </div>
                   </div>
-                  {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  {isExpanded ? <ChevronUp className="h-4 w-4 text-[#94a3b8]" /> : <ChevronDown className="h-4 w-4 text-[#94a3b8]" />}
                 </button>
 
                 {isExpanded && (
                   <div className="px-3 pb-3">
-                    <p className="text-sm text-gray-600 mb-2">{q.engineerPrompt}</p>
+                    <p className="text-sm text-[#94a3b8] mb-2">{q.engineerPrompt}</p>
 
                     {q.freeform ? (
                       <Input
                         placeholder={q.placeholder}
                         value={captureAnswers[q.id as keyof CaptureAnswers] || ""}
                         onChange={(e) => setAnswer(q.id, e.target.value)}
-                        className="bg-white"
+                        className="bg-[#0f172a] border-[#334155] text-[#e2e8f0] placeholder:text-[#64748b]"
                       />
                     ) : (
                       <div className="grid grid-cols-2 gap-2">
@@ -551,8 +500,8 @@ export function EngineerReview({
                             onClick={() => setAnswer(q.id, opt.value)}
                             className={`p-2 text-left text-sm rounded border transition-all ${
                               captureAnswers[q.id as keyof CaptureAnswers] === opt.value
-                                ? "border-blue-400 bg-blue-50"
-                                : "border-gray-200 bg-white hover:border-gray-300"
+                                ? "border-[#06b6d4] bg-[#334155] text-[#e2e8f0]"
+                                : "border-[#334155] bg-[#0f172a] text-[#94a3b8] hover:border-[#06b6d4]"
                             }`}
                           >
                             {opt.label}
@@ -569,38 +518,39 @@ export function EngineerReview({
       </Card>
 
       {/* Decision */}
-      <Card className="p-6">
+      <Card className="p-6 bg-[#1e293b]/50 border-[#334155]">
         {!showRejectForm ? (
           <div className="space-y-4">
             {/* Status messages */}
             {!allAccuracyAnswered && (
-              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                <span className="text-yellow-800">Answer the accuracy questions above</span>
+              <div className="p-3 bg-[#334155] border border-[#334155] rounded-lg flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-[#94a3b8]" />
+                <span className="text-[#cbd5e1]">Answer the accuracy questions above</span>
               </div>
             )}
 
             {anyAccuracyFailed && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-                <XCircle className="h-5 w-5 text-red-600" />
-                <span className="text-red-800">Something is wrong - please reject with a reason</span>
+              <div className="p-3 bg-[#334155] border border-[#334155] rounded-lg flex items-center gap-2">
+                <XCircle className="h-5 w-5 text-red-400" />
+                <span className="text-[#cbd5e1]">Something is wrong - please reject with a reason</span>
               </div>
             )}
 
             {allAccuracyPassed && (
               <div className="space-y-3">
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="text-green-800">Ready to approve</span>
+                <div className="p-3 bg-[#334155] border border-[#334155] rounded-lg flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <span className="text-[#cbd5e1]">Ready to approve</span>
                 </div>
                 <Textarea
                   placeholder="Any additional notes..."
                   value={approveNotes}
                   onChange={(e) => setApproveNotes(e.target.value)}
                   rows={2}
+                  className="bg-[#0f172a] border-[#334155] text-[#e2e8f0] placeholder:text-[#64748b]"
                 />
                 <Button
-                  className="w-full bg-green-600 hover:bg-green-700"
+                  className="w-full bg-[#475569] hover:bg-[#64748b] text-[#e2e8f0]"
                   onClick={() => onApprove(approveNotes, captureAnswers, corrections)}
                   disabled={isSubmitting}
                 >
@@ -613,7 +563,7 @@ export function EngineerReview({
             <div className="flex gap-3">
               <Button
                 variant="outline"
-                className="flex-1"
+                className="flex-1 border-[#334155] text-[#cbd5e1] hover:bg-[#334155] hover:text-[#e2e8f0]"
                 onClick={() => setShowRejectForm(true)}
                 disabled={isSubmitting}
               >
@@ -625,7 +575,7 @@ export function EngineerReview({
         ) : (
           /* Reject form */
           <div className="space-y-4">
-            <h3 className="font-semibold">Why should this be rejected?</h3>
+            <h3 className="font-semibold text-[#e2e8f0]">Why should this be rejected?</h3>
 
             <div className="grid grid-cols-2 gap-2">
               {[
@@ -641,8 +591,8 @@ export function EngineerReview({
                   onClick={() => setRejectCategory(option.id)}
                   className={`p-3 text-left rounded-lg border transition-all ${
                     rejectCategory === option.id
-                      ? "border-red-400 bg-red-50"
-                      : "border-gray-200 hover:border-gray-300"
+                      ? "border-[#06b6d4] bg-[#334155] text-[#e2e8f0]"
+                      : "border-[#334155] bg-[#1e293b] text-[#94a3b8] hover:border-[#06b6d4]"
                   }`}
                 >
                   {option.label}
@@ -655,14 +605,15 @@ export function EngineerReview({
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               rows={3}
+              className="bg-[#0f172a] border-[#334155] text-[#e2e8f0] placeholder:text-[#64748b]"
             />
 
             <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setShowRejectForm(false)} disabled={isSubmitting}>
+              <Button variant="outline" onClick={() => setShowRejectForm(false)} disabled={isSubmitting} className="border-[#334155] text-[#cbd5e1] hover:bg-[#334155]">
                 Cancel
               </Button>
               <Button
-                className="flex-1 bg-red-600 hover:bg-red-700"
+                className="flex-1 bg-[#475569] hover:bg-[#64748b] text-[#e2e8f0]"
                 onClick={() => onReject(rejectReason, rejectCategory)}
                 disabled={!rejectCategory || !rejectReason || isSubmitting}
               >
@@ -675,12 +626,11 @@ export function EngineerReview({
       </Card>
 
       {/* Footer */}
-      <div className="text-center text-sm text-gray-500 space-y-1">
+      <div className="text-center text-sm text-[#64748b] space-y-1">
         <div>
-          <Network className="h-4 w-4 inline mr-1" />
-          <strong>Library</strong> → <strong>Knowledge Metadata</strong> → <strong>Graph Neural Network</strong>
+          <span className="text-[#94a3b8]">Library</span> → <span className="text-[#94a3b8]">Knowledge Metadata</span> → <span className="text-[#94a3b8]">Graph Neural Network</span>
         </div>
-        <div className="text-xs text-gray-400">
+        <div className="text-xs text-[#475569]">
           Your expertise becomes intelligence the whole community can query
         </div>
       </div>

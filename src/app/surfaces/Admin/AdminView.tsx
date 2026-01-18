@@ -289,7 +289,7 @@ export function AdminView() {
               12 potential duplicates detected
             </div>
             <div className="p-3 bg-slate-800/50 border border-slate-700 rounded text-sm text-slate-300">
-              5 stale entries (>30 days)
+              5 stale entries (&gt;30 days)
             </div>
           </div>
         </div>
@@ -313,7 +313,7 @@ export function AdminView() {
                     className="w-4 h-4 rounded border-slate-600 bg-slate-700"
                   />
                   <span className="text-sm text-slate-300">
-                    Auto-approve extractions with confidence > 0.9
+                    Auto-approve extractions with confidence &gt; 0.9
                   </span>
                 </label>
                 <label className="flex items-center gap-3 cursor-pointer">

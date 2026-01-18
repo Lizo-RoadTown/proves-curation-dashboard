@@ -4,21 +4,35 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "./utils";
 
+/**
+ * Button Hierarchy (Enterprise Ops Console):
+ * - Primary: Solid cyan - ONE per panel (Submit, Approve)
+ * - Secondary: Outline - alternatives (Save draft, Cancel)
+ * - Ghost: No border - icon actions (open, copy, link)
+ * - Destructive: Muted red - reject/delete (not neon)
+ */
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:ring-[#06b6d4]/30 focus-visible:ring-[3px]",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        // Primary: Cyan solid - use sparingly (one per panel)
+        default:
+          "bg-[#06b6d4] text-[#0f172a] hover:bg-[#22d3ee] font-semibold",
+        // Destructive: Muted red, not neon
         destructive:
-          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+          "bg-[#7f1d1d] text-[#fecaca] hover:bg-[#991b1b] focus-visible:ring-[#dc2626]/30",
+        // Secondary: Outline style for alternatives
         outline:
-          "border bg-background text-foreground hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
+          "border border-[#334155] bg-transparent text-[#e2e8f0] hover:bg-[#334155] hover:text-[#f1f5f9]",
+        // Secondary solid: Muted fill
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "bg-[#334155] text-[#e2e8f0] hover:bg-[#475569]",
+        // Ghost: No border, subtle hover (for icon actions)
         ghost:
-          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
-        link: "text-primary underline-offset-4 hover:underline",
+          "text-[#94a3b8] hover:bg-[#334155] hover:text-[#e2e8f0]",
+        // Link: Underlined text
+        link: "text-[#06b6d4] underline-offset-4 hover:underline",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

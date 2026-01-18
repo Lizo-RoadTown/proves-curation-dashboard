@@ -250,21 +250,21 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
 
     if (lineage.verified && lineage.confidence >= 0.9) {
       return (
-        <Badge variant="outline" className="text-green-700 border-green-300 bg-green-50">
+        <Badge variant="outline" className="text-slate-300 border-slate-600 bg-slate-800">
           <CheckCircle className="w-3 h-3 mr-1" />
           Verified (exact match)
         </Badge>
       );
     } else if (lineage.verified && lineage.confidence >= 0.7) {
       return (
-        <Badge variant="outline" className="text-yellow-700 border-yellow-300 bg-yellow-50">
+        <Badge variant="outline" className="text-slate-300 border-slate-600 bg-slate-800">
           <AlertTriangle className="w-3 h-3 mr-1" />
           Verified (normalized)
         </Badge>
       );
     } else {
       return (
-        <Badge variant="outline" className="text-red-700 border-red-300 bg-red-50">
+        <Badge variant="outline" className="text-slate-400 border-slate-600 bg-slate-800">
           <XCircle className="w-3 h-3 mr-1" />
           Not verified
         </Badge>
@@ -273,13 +273,13 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
   };
 
   const renderConfidenceBar = (score: number) => {
-    const color = score >= 0.8 ? "bg-green-500" : score >= 0.5 ? "bg-yellow-500" : "bg-red-500";
+    const color = score >= 0.8 ? "bg-slate-400" : score >= 0.5 ? "bg-slate-500" : "bg-slate-600";
     return (
       <div className="flex items-center gap-3">
-        <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
           <div className={`h-full ${color}`} style={{ width: `${score * 100}%` }} />
         </div>
-        <span className="text-sm font-semibold">{Math.round(score * 100)}%</span>
+        <span className="text-sm font-semibold text-slate-200">{Math.round(score * 100)}%</span>
       </div>
     );
   };
@@ -290,21 +290,21 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
 
   if (loadingDetail || !currentExtraction) {
     return (
-      <div className="p-8 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        <span className="ml-3 text-gray-600">Loading extraction...</span>
+      <div className="p-8 flex items-center justify-center bg-slate-900 min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
+        <span className="ml-3 text-slate-400">Loading extraction...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-8">
-        <div className="flex items-center gap-3 text-red-600">
+      <div className="p-8 bg-slate-900 min-h-screen">
+        <div className="flex items-center gap-3 text-red-400">
           <AlertTriangle className="h-5 w-5" />
           <span>Error: {error}</span>
         </div>
-        <Button variant="outline" onClick={onBack} className="mt-4">
+        <Button variant="outline" onClick={onBack} className="mt-4 border-slate-600 text-slate-300 hover:bg-slate-800">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to List
         </Button>
@@ -319,24 +319,24 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
   // =============================================================================
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-8 space-y-6 bg-slate-900 min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={onBack}>
+          <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-300 hover:text-slate-100 hover:bg-slate-800">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to List
           </Button>
           <div>
-            <h2 className="text-2xl font-semibold">{currentExtraction.candidate_key}</h2>
-            <p className="text-sm text-gray-600">
+            <h2 className="text-2xl font-semibold text-slate-100">{currentExtraction.candidate_key}</h2>
+            <p className="text-sm text-slate-400">
               {currentExtraction.candidate_type} &middot; {currentExtraction.ecosystem || "unknown"}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {renderLineageStatus()}
-          <Badge variant="outline">{currentExtraction.status}</Badge>
+          <Badge variant="outline" className="border-slate-600 text-slate-300">{currentExtraction.status}</Badge>
         </div>
       </div>
 
@@ -345,15 +345,15 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
         <div className="lg:col-span-2 space-y-6">
 
           {/* 1. Evidence Section */}
-          <Card className="p-6">
+          <Card className="p-6 bg-slate-800/50 border-slate-700">
             <Collapsible open={evidenceExpanded} onOpenChange={setEvidenceExpanded}>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold flex items-center gap-2">
+                <h3 className="font-semibold flex items-center gap-2 text-slate-100">
                   1. Evidence
-                  <span className="text-xs text-gray-500 font-normal">(Source verification)</span>
+                  <span className="text-xs text-slate-500 font-normal">(Source verification)</span>
                 </h3>
                 <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" className="text-slate-400 hover:text-slate-200 hover:bg-slate-700">
                     {evidenceExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                   </Button>
                 </CollapsibleTrigger>
@@ -362,11 +362,11 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
               <CollapsibleContent className="space-y-4">
                 {/* Quote */}
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  <label className="text-sm font-medium text-slate-300 mb-2 block">
                     Extracted Evidence
                   </label>
-                  <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
-                    <p className="text-sm italic">
+                  <div className="p-4 bg-slate-700 border-l-4 border-slate-500 rounded">
+                    <p className="text-sm italic text-slate-300">
                       {evidence.raw_text || "No evidence text available"}
                     </p>
                   </div>
@@ -375,15 +375,15 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
                 {/* Source */}
                 <div className="flex items-center justify-between">
                   <div>
-                    <label className="text-sm font-medium text-gray-700">Source</label>
-                    <p className="text-sm text-gray-600">{snapshot.source_url || "Unknown source"}</p>
+                    <label className="text-sm font-medium text-slate-300">Source</label>
+                    <p className="text-sm text-slate-400">{snapshot.source_url || "Unknown source"}</p>
                   </div>
                   {snapshot.source_url && (
                     <a
                       href={snapshot.source_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                      className="text-sm text-slate-400 hover:text-slate-200 flex items-center gap-1"
                     >
                       Open Source <ExternalLink className="h-3 w-3" />
                     </a>
@@ -392,7 +392,7 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
 
                 {/* Lineage details */}
                 {evidence.byte_offset !== null && (
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-slate-500">
                     Byte offset: {evidence.byte_offset} | Length: {evidence.byte_length} |
                     Checksum: {evidence.checksum?.slice(0, 12)}...
                   </div>
@@ -402,13 +402,13 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
                 {snapshot.context_excerpt && (
                   <Collapsible>
                     <CollapsibleTrigger asChild>
-                      <Button variant="outline" size="sm" className="w-full">
+                      <Button variant="outline" size="sm" className="w-full border-slate-600 text-slate-300 hover:bg-slate-700">
                         Show Full Context <ChevronDown className="h-4 w-4 ml-2" />
                       </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="mt-3">
-                      <div className="p-4 bg-gray-50 rounded border max-h-64 overflow-y-auto">
-                        <pre className="text-xs whitespace-pre-wrap font-mono">
+                      <div className="p-4 bg-slate-700 rounded border border-slate-600 max-h-64 overflow-y-auto">
+                        <pre className="text-xs whitespace-pre-wrap font-mono text-slate-300">
                           {snapshot.context_excerpt}
                         </pre>
                       </div>
@@ -420,15 +420,15 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
           </Card>
 
           {/* 2. AI Reasoning Section */}
-          <Card className="p-6">
+          <Card className="p-6 bg-slate-800/50 border-slate-700">
             <Collapsible open={reasoningExpanded} onOpenChange={setReasoningExpanded}>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold flex items-center gap-2">
+                <h3 className="font-semibold flex items-center gap-2 text-slate-100">
                   2. AI Reasoning
-                  <span className="text-xs text-gray-500 font-normal">(Why this was extracted)</span>
+                  <span className="text-xs text-slate-500 font-normal">(Why this was extracted)</span>
                 </h3>
                 <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" className="text-slate-400 hover:text-slate-200 hover:bg-slate-700">
                     {reasoningExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                   </Button>
                 </CollapsibleTrigger>
@@ -437,20 +437,20 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
               <CollapsibleContent className="space-y-4">
                 {/* Confidence */}
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  <label className="text-sm font-medium text-slate-300 mb-2 block">
                     Confidence: {Math.round(confidence.score * 100)}%
                   </label>
                   {renderConfidenceBar(confidence.score)}
-                  <p className="text-sm text-gray-600 mt-2">{confidence.reason}</p>
+                  <p className="text-sm text-slate-400 mt-2">{confidence.reason}</p>
                 </div>
 
                 {/* Signals observed */}
                 {evidence.rationale_summary.signals_observed.length > 0 && (
                   <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">
+                    <label className="text-sm font-medium text-slate-300 mb-2 block">
                       Signals Observed
                     </label>
-                    <ul className="text-sm text-gray-600 list-disc list-inside">
+                    <ul className="text-sm text-slate-400 list-disc list-inside">
                       {evidence.rationale_summary.signals_observed.map((signal, i) => (
                         <li key={i}>{signal}</li>
                       ))}
@@ -461,10 +461,10 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
                 {/* Comparisons made */}
                 {evidence.rationale_summary.comparisons_made.length > 0 && (
                   <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">
+                    <label className="text-sm font-medium text-slate-300 mb-2 block">
                       Comparisons Made
                     </label>
-                    <ul className="text-sm text-gray-600 list-disc list-inside">
+                    <ul className="text-sm text-slate-400 list-disc list-inside">
                       {evidence.rationale_summary.comparisons_made.map((comp, i) => (
                         <li key={i}>{comp}</li>
                       ))}
@@ -474,12 +474,12 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
 
                 {/* Uncertainty factors */}
                 {evidence.rationale_summary.uncertainty_factors.length > 0 && (
-                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
-                    <label className="text-sm font-medium text-yellow-800 mb-2 block flex items-center gap-2">
+                  <div className="p-3 bg-slate-700 border border-slate-600 rounded">
+                    <label className="text-sm font-medium text-slate-300 mb-2 block flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4" />
                       Uncertainty Factors
                     </label>
-                    <ul className="text-sm text-yellow-700 list-disc list-inside">
+                    <ul className="text-sm text-slate-400 list-disc list-inside">
                       {evidence.rationale_summary.uncertainty_factors.map((factor, i) => (
                         <li key={i}>{factor}</li>
                       ))}
@@ -491,19 +491,19 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
           </Card>
 
           {/* 3. Duplicate Check Section */}
-          <Card className="p-6">
+          <Card className="p-6 bg-slate-800/50 border-slate-700">
             <Collapsible open={duplicateExpanded} onOpenChange={setDuplicateExpanded}>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold flex items-center gap-2">
+                <h3 className="font-semibold flex items-center gap-2 text-slate-100">
                   3. Duplicate Check
                   {evidence.duplicate_check.similar_entities.length > 0 && (
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className="text-xs bg-slate-700 text-slate-300">
                       {evidence.duplicate_check.similar_entities.length} similar
                     </Badge>
                   )}
                 </h3>
                 <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" className="text-slate-400 hover:text-slate-200 hover:bg-slate-700">
                     {duplicateExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                   </Button>
                 </CollapsibleTrigger>
@@ -512,11 +512,8 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
               <CollapsibleContent className="space-y-4">
                 {/* AI recommendation */}
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">AI Recommendation:</span>
-                  <Badge variant={
-                    evidence.duplicate_check.recommendation === 'create_new' ? 'secondary' :
-                    evidence.duplicate_check.recommendation === 'merge_with' ? 'outline' : 'destructive'
-                  }>
+                  <span className="text-sm text-slate-400">AI Recommendation:</span>
+                  <Badge variant="outline" className="border-slate-600 text-slate-300 bg-slate-700">
                     {evidence.duplicate_check.recommendation === 'create_new' && "Create New Entity"}
                     {evidence.duplicate_check.recommendation === 'merge_with' && "Consider Merging"}
                     {evidence.duplicate_check.recommendation === 'needs_review' && "Needs Manual Review"}
@@ -525,11 +522,11 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
 
                 {/* Exact matches */}
                 {evidence.duplicate_check.exact_matches.length > 0 && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded">
-                    <label className="text-sm font-medium text-red-800 mb-2 block">
+                  <div className="p-3 bg-slate-700 border border-slate-600 rounded">
+                    <label className="text-sm font-medium text-slate-300 mb-2 block">
                       Exact Matches Found
                     </label>
-                    <ul className="text-sm text-red-700">
+                    <ul className="text-sm text-slate-400">
                       {evidence.duplicate_check.exact_matches.map((id, i) => (
                         <li key={i} className="font-mono">{id}</li>
                       ))}
@@ -540,17 +537,17 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
                 {/* Similar entities */}
                 {evidence.duplicate_check.similar_entities.length > 0 && (
                   <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">
+                    <label className="text-sm font-medium text-slate-300 mb-2 block">
                       Similar Entities
                     </label>
                     <div className="space-y-2">
                       {evidence.duplicate_check.similar_entities.map((entity, i) => (
-                        <div key={i} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <div key={i} className="flex items-center justify-between p-2 bg-slate-700 rounded">
                           <div>
-                            <span className="text-sm font-medium">{entity.name}</span>
-                            <span className="text-xs text-gray-500 ml-2">({Math.round(entity.similarity * 100)}% similar)</span>
+                            <span className="text-sm font-medium text-slate-200">{entity.name}</span>
+                            <span className="text-xs text-slate-500 ml-2">({Math.round(entity.similarity * 100)}% similar)</span>
                           </div>
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" className="border-slate-600 text-slate-300 hover:bg-slate-600">
                             <GitMerge className="h-3 w-3 mr-1" />
                             Merge
                           </Button>
@@ -561,34 +558,34 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
                 )}
 
                 {evidence.duplicate_check.exact_matches.length === 0 && evidence.duplicate_check.similar_entities.length === 0 && (
-                  <p className="text-sm text-gray-500">No duplicates or similar entities found.</p>
+                  <p className="text-sm text-slate-500">No duplicates or similar entities found.</p>
                 )}
               </CollapsibleContent>
             </Collapsible>
           </Card>
 
           {/* 4. Entity Payload Section */}
-          <Card className="p-6">
+          <Card className="p-6 bg-slate-800/50 border-slate-700">
             <Collapsible open={payloadExpanded} onOpenChange={setPayloadExpanded}>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold flex items-center gap-2">
+                <h3 className="font-semibold flex items-center gap-2 text-slate-100">
                   4. Entity Payload
-                  <span className="text-xs text-gray-500 font-normal">(Editable)</span>
+                  <span className="text-xs text-slate-500 font-normal">(Editable)</span>
                   {formState.hasUnsavedEdits && (
-                    <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800">
+                    <Badge variant="secondary" className="text-xs bg-slate-700 text-slate-300">
                       Unsaved changes
                     </Badge>
                   )}
                 </h3>
                 <div className="flex items-center gap-2">
                   {formState.hasUnsavedEdits && (
-                    <Button variant="outline" size="sm" onClick={handleSaveEdits} disabled={isSubmitting}>
+                    <Button variant="outline" size="sm" onClick={handleSaveEdits} disabled={isSubmitting} className="border-slate-600 text-slate-300 hover:bg-slate-700">
                       <Save className="h-4 w-4 mr-1" />
                       Save Edits
                     </Button>
                   )}
                   <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" className="text-slate-400 hover:text-slate-200 hover:bg-slate-700">
                       {payloadExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </Button>
                   </CollapsibleTrigger>
@@ -598,18 +595,18 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
               <CollapsibleContent className="space-y-4">
                 {Object.entries(formState.editedPayload).map(([key, value]) => (
                   <div key={key}>
-                    <label className="text-sm font-medium text-gray-700 capitalize">{key}</label>
+                    <label className="text-sm font-medium text-slate-300 capitalize">{key}</label>
                     {typeof value === "string" ? (
                       <Input
                         value={value}
                         onChange={(e) => handlePayloadFieldChange(key, e.target.value)}
-                        className="mt-1"
+                        className="mt-1 bg-slate-900 border-slate-600 text-slate-200"
                       />
                     ) : Array.isArray(value) ? (
                       <Input
                         value={value.join(", ")}
                         onChange={(e) => handlePayloadFieldChange(key, e.target.value.split(", ").filter(Boolean))}
-                        className="mt-1"
+                        className="mt-1 bg-slate-900 border-slate-600 text-slate-200"
                         placeholder="Comma-separated values"
                       />
                     ) : (
@@ -622,7 +619,7 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
                             // Invalid JSON, keep as string
                           }
                         }}
-                        className="mt-1 font-mono text-xs"
+                        className="mt-1 font-mono text-xs bg-slate-900 border-slate-600 text-slate-200"
                         rows={3}
                       />
                     )}
@@ -636,26 +633,26 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
         {/* Right Column - Decision Panel */}
         <div className="space-y-6">
           {/* Decision Actions */}
-          <Card className="p-6 sticky top-6">
-            <h3 className="font-semibold mb-4">5. Review Decision</h3>
+          <Card className="p-6 sticky top-6 bg-slate-800/50 border-slate-700">
+            <h3 className="font-semibold mb-4 text-slate-100">5. Review Decision</h3>
 
             <div className="space-y-4">
               {/* Approve */}
               <Button
-                className="w-full bg-green-600 hover:bg-green-700"
+                className="w-full bg-slate-600 hover:bg-slate-500 text-slate-100"
                 onClick={() => setShowApproveDialog(true)}
                 disabled={isSubmitting}
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Approve
               </Button>
-              <p className="text-xs text-gray-600">Add to verified library.</p>
+              <p className="text-xs text-slate-500">Add to verified library.</p>
 
               {/* Show diff and approve */}
               {formState.hasUnsavedEdits && (
                 <Button
                   variant="outline"
-                  className="w-full border-green-300 text-green-700 hover:bg-green-50"
+                  className="w-full border-slate-600 text-slate-300 hover:bg-slate-700"
                   onClick={() => setShowDiffDialog(true)}
                   disabled={isSubmitting}
                 >
@@ -667,23 +664,23 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
               {/* Reject */}
               <Button
                 variant="outline"
-                className="w-full border-red-300 text-red-700 hover:bg-red-50"
+                className="w-full border-slate-600 text-slate-300 hover:bg-slate-700"
                 onClick={() => setShowRejectDialog(true)}
                 disabled={isSubmitting}
               >
                 <XCircle className="h-4 w-4 mr-2" />
                 Reject
               </Button>
-              <p className="text-xs text-gray-600">Requires a structured reason.</p>
+              <p className="text-xs text-slate-500">Requires a structured reason.</p>
             </div>
 
             {/* Optional: Confidence Override */}
-            <div className="mt-6 pt-4 border-t">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+            <div className="mt-6 pt-4 border-t border-slate-600">
+              <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
                 <Shield className="h-4 w-4" />
                 Confidence Override (optional)
               </label>
-              <p className="text-xs text-gray-500 mb-2">
+              <p className="text-xs text-slate-500 mb-2">
                 Disagree with AI's {Math.round(confidence.score * 100)}% confidence?
               </p>
               <Slider
@@ -705,22 +702,22 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
                     placeholder="Why do you disagree with the confidence?"
                     value={formState.confidenceOverrideReason}
                     onChange={(e) => setFormState(prev => ({ ...prev, confidenceOverrideReason: e.target.value }))}
-                    className="text-sm"
+                    className="text-sm bg-slate-900 border-slate-600 text-slate-200"
                   />
                 </div>
               )}
             </div>
 
             {/* Optional: Source Flag */}
-            <div className="mt-4 pt-4 border-t">
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+            <div className="mt-4 pt-4 border-t border-slate-600">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-300">
                 <input
                   type="checkbox"
                   checked={formState.sourceFlagged}
                   onChange={(e) => setFormState(prev => ({ ...prev, sourceFlagged: e.target.checked }))}
-                  className="rounded"
+                  className="rounded bg-slate-700 border-slate-600"
                 />
-                <ShieldAlert className="h-4 w-4 text-yellow-600" />
+                <ShieldAlert className="h-4 w-4 text-slate-400" />
                 Flag source as questionable
               </label>
               {formState.sourceFlagged && (
@@ -728,19 +725,19 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
                   placeholder="Why is this source questionable?"
                   value={formState.sourceFlagReason}
                   onChange={(e) => setFormState(prev => ({ ...prev, sourceFlagReason: e.target.value }))}
-                  className="mt-2 text-sm"
+                  className="mt-2 text-sm bg-slate-900 border-slate-600 text-slate-200"
                 />
               )}
             </div>
           </Card>
 
           {/* Help Panel */}
-          <Card className="p-4 bg-blue-50 border-blue-200">
+          <Card className="p-4 bg-slate-800/50 border-slate-700">
             <div className="flex items-start gap-2">
-              <HelpCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <HelpCircle className="h-5 w-5 text-slate-500 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-sm font-semibold mb-1">Review Guidelines</h4>
-                <ul className="text-xs text-gray-700 space-y-1">
+                <h4 className="text-sm font-semibold text-slate-300 mb-1">Review Guidelines</h4>
+                <ul className="text-xs text-slate-500 space-y-1">
                   <li>&bull; Verify evidence matches the entity</li>
                   <li>&bull; Check for duplicates before approving</li>
                   <li>&bull; Edit payload fields if needed</li>
@@ -755,27 +752,27 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
 
       {/* Approve Dialog */}
       <AlertDialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-slate-800 border-slate-700">
           <AlertDialogHeader>
-            <AlertDialogTitle>Approve This Extraction?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-slate-100">Approve This Extraction?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
               This will add "{currentExtraction.candidate_key}" to the verified library.
               {formState.hasUnsavedEdits && " Your edits will be saved."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4">
-            <label className="text-sm font-medium text-gray-700">Approval notes (optional)</label>
+            <label className="text-sm font-medium text-slate-300">Approval notes (optional)</label>
             <Textarea
               placeholder="Any notes about this approval..."
               value={formState.decisionReason}
               onChange={(e) => setFormState(prev => ({ ...prev, decisionReason: e.target.value }))}
               rows={2}
-              className="mt-1"
+              className="mt-1 bg-slate-900 border-slate-600 text-slate-200 placeholder:text-slate-500"
             />
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleApprove} disabled={isSubmitting}>
+            <AlertDialogCancel disabled={isSubmitting} className="bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleApprove} disabled={isSubmitting} className="bg-slate-600 hover:bg-slate-500 text-slate-100">
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Approve
             </AlertDialogAction>
@@ -785,30 +782,30 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
 
       {/* Reject Dialog */}
       <AlertDialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <AlertDialogContent className="max-w-lg">
+        <AlertDialogContent className="max-w-lg bg-slate-800 border-slate-700">
           <AlertDialogHeader>
-            <AlertDialogTitle>Reject This Extraction?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-slate-100">Reject This Extraction?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
               Select a reason to help improve future extractions.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4 space-y-4">
             {/* Rejection category dropdown */}
             <div>
-              <label className="text-sm font-medium text-gray-700">Rejection Category *</label>
+              <label className="text-sm font-medium text-slate-300">Rejection Category *</label>
               <Select
                 value={formState.rejectionCategory || ""}
                 onValueChange={(value) => setFormState(prev => ({ ...prev, rejectionCategory: value as RejectionCategory }))}
               >
-                <SelectTrigger className="mt-1">
+                <SelectTrigger className="mt-1 bg-slate-900 border-slate-600 text-slate-200">
                   <SelectValue placeholder="Select a category..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-slate-800 border-slate-700">
                   {Object.entries(REJECTION_GROUPS).map(([family, { label, categories }]) => (
                     <SelectGroup key={family}>
-                      <SelectLabel>{label}</SelectLabel>
+                      <SelectLabel className="text-slate-400">{label}</SelectLabel>
                       {categories.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
+                        <SelectItem key={cat} value={cat} className="text-slate-200 focus:bg-slate-700 focus:text-slate-100">
                           {REJECTION_LABELS[cat]}
                         </SelectItem>
                       ))}
@@ -820,22 +817,22 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
 
             {/* Additional notes */}
             <div>
-              <label className="text-sm font-medium text-gray-700">Additional notes (optional)</label>
+              <label className="text-sm font-medium text-slate-300">Additional notes (optional)</label>
               <Textarea
                 placeholder="Explain why this extraction should be rejected..."
                 value={formState.decisionReason}
                 onChange={(e) => setFormState(prev => ({ ...prev, decisionReason: e.target.value }))}
                 rows={3}
-                className="mt-1"
+                className="mt-1 bg-slate-900 border-slate-600 text-slate-200 placeholder:text-slate-500"
               />
             </div>
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isSubmitting} className="bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleReject}
               disabled={isSubmitting || !formState.rejectionCategory}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-slate-600 hover:bg-slate-500 text-slate-100"
             >
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Reject
@@ -846,10 +843,10 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
 
       {/* Diff Preview Dialog */}
       <AlertDialog open={showDiffDialog} onOpenChange={setShowDiffDialog}>
-        <AlertDialogContent className="max-w-2xl">
+        <AlertDialogContent className="max-w-2xl bg-slate-800 border-slate-700">
           <AlertDialogHeader>
-            <AlertDialogTitle>Review Your Changes</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-slate-100">Review Your Changes</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
               The following changes will be saved before approval.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -857,30 +854,30 @@ export function ExtractionDetail({ extractionId, onBack, reviewerId = "dashboard
             {payloadDiff.length > 0 ? (
               <div className="space-y-2">
                 {payloadDiff.map((diff, i) => (
-                  <div key={i} className="p-3 bg-gray-50 rounded border">
-                    <div className="font-medium text-sm capitalize">{diff.field}</div>
+                  <div key={i} className="p-3 bg-slate-700 rounded border border-slate-600">
+                    <div className="font-medium text-sm capitalize text-slate-200">{diff.field}</div>
                     {diff.changeType === 'added' && (
-                      <div className="text-sm text-green-600">+ {JSON.stringify(diff.newValue)}</div>
+                      <div className="text-sm text-green-400">+ {JSON.stringify(diff.newValue)}</div>
                     )}
                     {diff.changeType === 'removed' && (
-                      <div className="text-sm text-red-600">- {JSON.stringify(diff.oldValue)}</div>
+                      <div className="text-sm text-red-400">- {JSON.stringify(diff.oldValue)}</div>
                     )}
                     {diff.changeType === 'modified' && (
                       <>
-                        <div className="text-sm text-red-600">- {JSON.stringify(diff.oldValue)}</div>
-                        <div className="text-sm text-green-600">+ {JSON.stringify(diff.newValue)}</div>
+                        <div className="text-sm text-red-400">- {JSON.stringify(diff.oldValue)}</div>
+                        <div className="text-sm text-green-400">+ {JSON.stringify(diff.newValue)}</div>
                       </>
                     )}
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500">No changes detected.</p>
+              <p className="text-sm text-slate-500">No changes detected.</p>
             )}
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleApprove} disabled={isSubmitting}>
+            <AlertDialogCancel disabled={isSubmitting} className="bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleApprove} disabled={isSubmitting} className="bg-slate-600 hover:bg-slate-500 text-slate-100">
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Save Changes & Approve
             </AlertDialogAction>

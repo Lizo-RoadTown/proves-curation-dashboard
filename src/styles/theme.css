@@ -1,100 +1,136 @@
 @custom-variant dark (&:is(.dark *));
 
-/* Mission Control Dashboard Theme - Dark by Default */
+/* =============================================================================
+   DIM ENTERPRISE MISSION CONTROL THEME
+   =============================================================================
+
+   Design Principles:
+   - Low-fatigue "dim" theme (not pure black)
+   - Only 3 surface levels
+   - Cyan accent ONLY for focus/selection
+   - Enterprise ops console aesthetic
+
+   Surface Hierarchy:
+   - Base:        #0f172a (slate-900) - app background
+   - Surface:     #1e293b (slate-800) - cards, panels
+   - Interactive: #334155 (slate-700) - inputs, hover, selected
+
+   Text Hierarchy:
+   - Primary:   #e2e8f0 (slate-200) - main content
+   - Secondary: #94a3b8 (slate-400) - labels, helpers
+   - Muted:     #64748b (slate-500) - disabled, tertiary
+
+   Accent Rules:
+   - Cyan (#06b6d4) is ONLY for: focus rings, selected nodes, active filters
+   - NOT for backgrounds, NOT for "pretty"
+
+   Button Hierarchy:
+   - Primary: solid cyan - ONE per panel (Submit, Approve)
+   - Secondary: outline/muted - alternatives (Save draft)
+   - Ghost: icon actions (open, copy, link)
+   - Destructive: muted red - reject/delete
+   ============================================================================= */
+
 :root {
   --font-size: 16px;
-  /* Dark backgrounds */
-  --background: #0f172a;  /* slate-900 */
-  --foreground: #e2e8f0;  /* slate-200 */
-  --card: #1e293b;  /* slate-800 */
+
+  /* ==========================================================================
+     SURFACE LEVELS (ONLY 3)
+     ========================================================================== */
+
+  /* Base - app background */
+  --background: #0f172a;
+  --foreground: #e2e8f0;
+
+  /* Surface - cards, panels, popovers */
+  --card: #1e293b;
   --card-foreground: #e2e8f0;
   --popover: #1e293b;
   --popover-foreground: #e2e8f0;
-  /* Electric blue primary */
-  --primary: #3b82f6;  /* blue-500 */
-  --primary-foreground: #ffffff;
-  /* Secondary - darker slate */
-  --secondary: #334155;  /* slate-700 */
+
+  /* Interactive - inputs, hover states, selected rows */
+  --secondary: #334155;
   --secondary-foreground: #e2e8f0;
-  /* Muted - subtle grays */
   --muted: #334155;
-  --muted-foreground: #94a3b8;  /* slate-400 */
-  /* Accent - cyan for highlights */
-  --accent: #06b6d4;  /* cyan-500 */
+  --muted-foreground: #94a3b8;
+
+  /* ==========================================================================
+     ACCENT - CYAN ONLY FOR FOCUS/SELECTION
+     ========================================================================== */
+  --accent: #06b6d4;
   --accent-foreground: #ffffff;
-  /* Destructive - red alerts */
-  --destructive: #ef4444;  /* red-500 */
-  --destructive-foreground: #ffffff;
-  /* Borders and inputs */
-  --border: #334155;  /* slate-700 */
-  --input: #1e293b;
-  --input-background: #1e293b;
+  --ring: #06b6d4;
+
+  /* ==========================================================================
+     PRIMARY ACTION - Used sparingly (one per panel)
+     ========================================================================== */
+  --primary: #06b6d4;
+  --primary-foreground: #0f172a;
+
+  /* ==========================================================================
+     DESTRUCTIVE - Muted, not neon
+     ========================================================================== */
+  --destructive: #dc2626;
+  --destructive-foreground: #fecaca;
+
+  /* ==========================================================================
+     BORDERS & INPUTS
+     ========================================================================== */
+  --border: #334155;
+  --input: #334155;
+  --input-background: #0f172a;
   --switch-background: #475569;
+
+  /* ==========================================================================
+     TYPOGRAPHY
+     ========================================================================== */
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: #3b82f6;
-  /* Mission control status colors */
-  --chart-1: #3b82f6;  /* blue - primary data */
-  --chart-2: #22c55e;  /* green - success/active */
-  --chart-3: #f59e0b;  /* amber - warning */
-  --chart-4: #06b6d4;  /* cyan - info */
-  --chart-5: #a855f7;  /* purple - special */
-  /* Sharp corners for mission control */
-  --radius: 0.25rem;
-  /* Sidebar */
-  --sidebar: #0f172a;
-  --sidebar-foreground: #e2e8f0;
-  --sidebar-primary: #3b82f6;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1e293b;
-  --sidebar-accent-foreground: #e2e8f0;
-  --sidebar-border: #334155;
-  --sidebar-ring: #3b82f6;
-  /* Mission control specific */
+
+  /* ==========================================================================
+     STATUS INDICATORS (Operational, not decorative)
+     ========================================================================== */
   --status-active: #22c55e;
   --status-warning: #f59e0b;
   --status-error: #ef4444;
   --status-info: #06b6d4;
-  --glow-primary: rgba(59, 130, 246, 0.3);
-  --glow-success: rgba(34, 197, 94, 0.3);
+
+  /* ==========================================================================
+     CHARTS & DATA VIZ
+     ========================================================================== */
+  --chart-1: #06b6d4;  /* cyan - primary/selected */
+  --chart-2: #22c55e;  /* green - success/active */
+  --chart-3: #f59e0b;  /* amber - warning */
+  --chart-4: #8b5cf6;  /* purple - special */
+  --chart-5: #64748b;  /* slate - neutral */
+
+  /* ==========================================================================
+     LAYOUT
+     ========================================================================== */
+  --radius: 0.375rem;
+
+  /* ==========================================================================
+     SIDEBAR (Navigation rail)
+     ========================================================================== */
+  --sidebar: #0f172a;
+  --sidebar-foreground: #94a3b8;
+  --sidebar-primary: #06b6d4;
+  --sidebar-primary-foreground: #0f172a;
+  --sidebar-accent: #1e293b;
+  --sidebar-accent-foreground: #e2e8f0;
+  --sidebar-border: #334155;
+  --sidebar-ring: #06b6d4;
+
+  /* ==========================================================================
+     GLOW EFFECTS (Subtle, for live indicators)
+     ========================================================================== */
+  --glow-primary: rgba(6, 182, 212, 0.2);
+  --glow-success: rgba(34, 197, 94, 0.2);
+  --glow-warning: rgba(245, 158, 11, 0.2);
+  --glow-error: rgba(239, 68, 68, 0.2);
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
-}
+/* No separate .dark class - we are ALWAYS dark */
 
 @theme inline {
   --color-background: var(--background);
