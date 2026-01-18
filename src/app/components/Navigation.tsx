@@ -15,27 +15,20 @@ const roleHierarchy: Record<string, number> = {
 };
 
 export function Navigation({ currentView, onNavigate, userRole = "lead" }: NavigationProps) {
-  // 3-surface navigation - brutally simple
+  // 2-surface navigation - Library + Admin (Ask is removed for now)
   const navItems = [
-    {
-      id: "ask",
-      label: "Ask",
-      icon: MessageSquare,
-      description: "Chat with the library",
-      minRole: "user",
-    },
     {
       id: "library",
       label: "Library",
       icon: BookOpen,
-      description: "Search + explore",
+      description: "Search + explore knowledge",
       minRole: "user",
     },
     {
       id: "admin",
       label: "Admin",
       icon: Settings,
-      description: "Manage sources",
+      description: "Manage sources & review",
       minRole: "lead", // Only lead+ can see Admin
     },
   ];
@@ -94,16 +87,10 @@ export function Navigation({ currentView, onNavigate, userRole = "lead" }: Navig
             <span className="text-white text-sm font-bold">?</span>
           </div>
           <div>
-            <div className="text-sm font-semibold text-gray-900">Need Help?</div>
+            <div className="text-sm font-semibold text-gray-900">Knowledge Graph</div>
             <p className="text-xs text-gray-600 mt-1">
-              Ask questions naturally - the agent will find answers
+              Explore the library's knowledge graph and review pending extractions
             </p>
-            <button
-              onClick={() => onNavigate("ask")}
-              className="text-xs text-blue-600 font-medium hover:underline mt-2 inline-block"
-            >
-              Go to Ask →
-            </button>
           </div>
         </div>
       </div>

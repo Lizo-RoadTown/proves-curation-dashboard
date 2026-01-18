@@ -1,21 +1,16 @@
 /**
- * EngineerReview - Review UI that captures engineer's embodied knowledge
+ * EngineerReview - Side-by-side comparison for training extractors
  *
- * Engineers ARE the experts. They can evaluate both:
- * 1. Technical accuracy (is this real?)
- * 2. Epistemic grounding (how was this known? by whom?)
+ * PURPOSE: This is a TRAINING interface.
+ * - Left side: What the AI extractor found (read-only)
+ * - Right side: What the human corrects/confirms
  *
- * The 7-question checklist maps directly to what engineers know from experience.
+ * The comparison data feeds back into improving extractors:
+ * - Where did the extractor get it right?
+ * - Where did the extractor miss or hallucinate?
+ * - What patterns should we train on?
  *
- * WHY THIS MATTERS:
- * The metadata from your answers becomes edge features in the Knowledge Graph.
- * A Graph Neural Network uses these features to:
- * - Weight predictions based on epistemic grounding (tribal vs documented)
- * - Flag knowledge at risk of loss (someone leaves = edge weakens)
- * - Trigger refresh when staleness thresholds cross
- * - Predict transfer difficulty for onboarding new team members
- *
- * Your embodied knowledge makes the neural network smarter.
+ * Engineers ARE the experts. Their corrections train the system.
  */
 
 import { useState } from "react";
@@ -167,9 +162,23 @@ interface CaptureAnswers {
   practice?: string;
 }
 
+// Human corrections to extractor output
+interface HumanCorrections {
+  // For entities
+  name?: string;
+  description?: string;
+  // For couplings
+  from_component?: string;
+  to_component?: string;
+  via_interface?: string;
+  flow?: string;
+  // Common
+  notes?: string;
+}
+
 interface EngineerReviewProps {
   extraction: ReviewExtractionDTO;
-  onApprove: (notes?: string, captureAnswers?: CaptureAnswers) => Promise<void>;
+  onApprove: (notes?: string, captureAnswers?: CaptureAnswers, corrections?: HumanCorrections) => Promise<void>;
   onReject: (reason: string, category: string) => Promise<void>;
   onBack: () => void;
   isSubmitting?: boolean;
@@ -192,6 +201,9 @@ export function EngineerReview({
   const [approveNotes, setApproveNotes] = useState("");
   const [captureAnswers, setCaptureAnswers] = useState<CaptureAnswers>({});
   const [expandedQuestions, setExpandedQuestions] = useState<Record<string, boolean>>({});
+
+  // Human corrections - initialize from extractor data
+  const [corrections, setCorrections] = useState<HumanCorrections>({});
 
   // Technical accuracy checks
   const [accuracyChecks, setAccuracyChecks] = useState<Record<string, boolean | null>>({
@@ -233,41 +245,156 @@ export function EngineerReview({
         </Badge>
       </div>
 
-      {/* What was extracted */}
+      {/* SIDE-BY-SIDE COMPARISON: Extractor vs Human */}
       <Card className="p-6">
-        <h2 className="text-lg font-semibold mb-4">What the AI Extracted</h2>
+        <div className="flex items-center gap-2 mb-4">
+          <h2 className="text-lg font-semibold">Extractor vs Human</h2>
+          <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+            Training Data
+          </Badge>
+        </div>
+        <p className="text-sm text-gray-600 mb-4">
+          Left: What the AI extracted. Right: Your corrections (or confirm if correct).
+        </p>
 
-        {isCoupling ? (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 flex-wrap p-4 bg-gray-50 rounded-lg">
-              <div className="px-3 py-2 bg-blue-100 text-blue-800 rounded font-medium">
-                {from as string}
+        <div className="grid grid-cols-2 gap-4">
+          {/* LEFT: Extractor Output (Read-Only) */}
+          <div className="border rounded-lg p-4 bg-slate-50">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="h-4 w-4 text-purple-500" />
+              <span className="text-sm font-semibold text-purple-700">AI Extractor Found</span>
+            </div>
+
+            {isCoupling ? (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-gray-500 block mb-1">From Component</label>
+                  <div className="px-3 py-2 bg-blue-100 text-blue-800 rounded text-sm">
+                    {from as string || <span className="text-gray-400 italic">Not detected</span>}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 block mb-1">To Component</label>
+                  <div className="px-3 py-2 bg-purple-100 text-purple-800 rounded text-sm">
+                    {to as string || <span className="text-gray-400 italic">Not detected</span>}
+                  </div>
+                </div>
+                {via && (
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">Via Interface</label>
+                    <div className="px-3 py-2 bg-gray-100 text-gray-700 rounded text-sm">{via as string}</div>
+                  </div>
+                )}
+                {flow && (
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">What Flows</label>
+                    <div className="px-3 py-2 bg-gray-100 text-gray-700 rounded text-sm">{flow as string}</div>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-2 text-gray-400">
-                <ArrowRight className="h-5 w-5" />
-                {via && <span className="text-sm italic">via {via as string}</span>}
-                <ArrowRight className="h-5 w-5" />
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-gray-500 block mb-1">Name</label>
+                  <div className="px-3 py-2 bg-blue-100 text-blue-800 rounded text-sm">{extraction.candidate_key}</div>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 block mb-1">Type</label>
+                  <div className="px-3 py-2 bg-gray-100 text-gray-700 rounded text-sm">{extraction.candidate_type}</div>
+                </div>
+                {candidate_payload.description && (
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">Description</label>
+                    <div className="px-3 py-2 bg-gray-100 text-gray-700 rounded text-sm">{candidate_payload.description as string}</div>
+                  </div>
+                )}
               </div>
-              <div className="px-3 py-2 bg-purple-100 text-purple-800 rounded font-medium">
-                {to as string}
+            )}
+
+            <div className="mt-3 pt-3 border-t border-gray-200">
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <span>Confidence: {(confidence * 100).toFixed(0)}%</span>
               </div>
             </div>
-            {flow && (
-              <div>
-                <span className="text-sm text-gray-500">What flows:</span>
-                <p className="text-gray-900">{flow as string}</p>
+          </div>
+
+          {/* RIGHT: Human Corrections (Editable) */}
+          <div className="border rounded-lg p-4 bg-green-50 border-green-200">
+            <div className="flex items-center gap-2 mb-3">
+              <User className="h-4 w-4 text-green-600" />
+              <span className="text-sm font-semibold text-green-700">Your Corrections</span>
+            </div>
+
+            {isCoupling ? (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-gray-500 block mb-1">From Component</label>
+                  <Input
+                    placeholder={from as string || "Enter correct component..."}
+                    value={corrections.from_component || ""}
+                    onChange={(e) => setCorrections(prev => ({ ...prev, from_component: e.target.value }))}
+                    className="bg-white text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 block mb-1">To Component</label>
+                  <Input
+                    placeholder={to as string || "Enter correct component..."}
+                    value={corrections.to_component || ""}
+                    onChange={(e) => setCorrections(prev => ({ ...prev, to_component: e.target.value }))}
+                    className="bg-white text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 block mb-1">Via Interface</label>
+                  <Input
+                    placeholder={via as string || "Enter interface..."}
+                    value={corrections.via_interface || ""}
+                    onChange={(e) => setCorrections(prev => ({ ...prev, via_interface: e.target.value }))}
+                    className="bg-white text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 block mb-1">What Flows</label>
+                  <Input
+                    placeholder={flow as string || "What data/signals flow?"}
+                    value={corrections.flow || ""}
+                    onChange={(e) => setCorrections(prev => ({ ...prev, flow: e.target.value }))}
+                    className="bg-white text-sm"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-gray-500 block mb-1">Name</label>
+                  <Input
+                    placeholder={extraction.candidate_key}
+                    value={corrections.name || ""}
+                    onChange={(e) => setCorrections(prev => ({ ...prev, name: e.target.value }))}
+                    className="bg-white text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 block mb-1">Description</label>
+                  <Textarea
+                    placeholder={candidate_payload.description as string || "Add description..."}
+                    value={corrections.description || ""}
+                    onChange={(e) => setCorrections(prev => ({ ...prev, description: e.target.value }))}
+                    className="bg-white text-sm"
+                    rows={2}
+                  />
+                </div>
               </div>
             )}
+
+            <div className="mt-3 pt-3 border-t border-green-200">
+              <p className="text-xs text-green-700">
+                Leave blank if extractor was correct. Only fill in corrections.
+              </p>
+            </div>
           </div>
-        ) : (
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <h3 className="text-xl font-semibold text-gray-900">{extraction.candidate_key}</h3>
-            <p className="text-sm text-gray-500">{extraction.candidate_type}</p>
-            {candidate_payload.description && (
-              <p className="mt-2 text-gray-700">{candidate_payload.description as string}</p>
-            )}
-          </div>
-        )}
+        </div>
       </Card>
 
       {/* Evidence */}
@@ -474,11 +601,11 @@ export function EngineerReview({
                 />
                 <Button
                   className="w-full bg-green-600 hover:bg-green-700"
-                  onClick={() => onApprove(approveNotes, captureAnswers)}
+                  onClick={() => onApprove(approveNotes, captureAnswers, corrections)}
                   disabled={isSubmitting}
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  Approve - Add to Library
+                  {Object.values(corrections).some(v => v) ? "Approve with Corrections" : "Approve - Extractor Correct"}
                 </Button>
               </div>
             )}

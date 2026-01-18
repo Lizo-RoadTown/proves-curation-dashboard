@@ -6,11 +6,11 @@ import { LoginPage } from "./components/auth/LoginPage";
 import { SignupPage } from "./components/auth/SignupPage";
 import { Loader2 } from "lucide-react";
 
-// New 3-surface architecture
-import { AskView, LibraryView, AdminView } from "./surfaces";
+// 2-surface architecture: Library + Admin
+import { LibraryView, AdminView } from "./surfaces";
 
-// Surface type - brutally simple: Ask, Library, Admin
-type Surface = "ask" | "library" | "admin";
+// Surface type - Library (default) and Admin
+type Surface = "library" | "admin";
 type AuthView = "login" | "signup";
 
 // DEV MODE: Skip auth for local development
@@ -18,7 +18,7 @@ const DEV_SKIP_AUTH = import.meta.env.DEV;
 
 export default function App() {
   const { user, loading, signOut } = useAuth();
-  const [currentSurface, setCurrentSurface] = useState<Surface>("ask");
+  const [currentSurface, setCurrentSurface] = useState<Surface>("library");
   const [authView, setAuthView] = useState<AuthView>("login");
   const [currentTeam, setCurrentTeam] = useState("PROVES Lab");
 
@@ -83,7 +83,6 @@ export default function App() {
           userRole={userRole}
         />
         <main className="flex-1 overflow-hidden">
-          {currentSurface === "ask" && <AskView />}
           {currentSurface === "library" && <LibraryView />}
           {currentSurface === "admin" && <AdminView />}
         </main>
