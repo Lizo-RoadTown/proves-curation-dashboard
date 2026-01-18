@@ -113,11 +113,17 @@ export function Graph3D({
 }: Graph3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<ForceGraph3DInstance | null>(null);
+  const autoRotateRef = useRef(true);
 
   const [selectedNode, setSelectedNode] = useState<Node3D | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(initialCategory || null);
   const [showPending, setShowPending] = useState(false);
   const [autoRotate, setAutoRotate] = useState(true);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    autoRotateRef.current = autoRotate;
+  }, [autoRotate]);
 
   // Fetch graph data with polling
   const {
@@ -137,7 +143,7 @@ export function Graph3D({
       category: activeCategory,
       verifiedOnly: !showPending,
     },
-    pollInterval: 10000,
+    pollInterval: null,  // Disabled by default - user can enable with play button
   });
 
   // Convert to 3d-force-graph format
@@ -263,10 +269,10 @@ export function Graph3D({
 
     graphRef.current = graph;
 
-    // Auto-rotate
+    // Auto-rotate (uses ref to avoid recreating graph on toggle)
     let angle = 0;
     const rotateInterval = setInterval(() => {
-      if (autoRotate && graphRef.current) {
+      if (autoRotateRef.current && graphRef.current) {
         angle += 0.002;
         const distance = 500;
         graphRef.current.cameraPosition({
@@ -290,7 +296,7 @@ export function Graph3D({
       window.removeEventListener('resize', handleResize);
       graph._destructor?.();
     };
-  }, [height, autoRotate, onNodeClick]);
+  }, [height, onNodeClick]);  // Removed autoRotate - using ref instead
 
   // Update data when it changes
   useEffect(() => {
