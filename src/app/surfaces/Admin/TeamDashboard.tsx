@@ -33,7 +33,7 @@ import {
 import { Card } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Badge } from "@/app/components/ui/badge";
-import { KnowledgeGraph, generateDemoGraphData } from "@/app/components/KnowledgeGraph";
+import { Graph3D } from "@/app/components/Graph3D";
 import { ActivityFeedCompact } from "@/app/components/ActivityFeed";
 
 // =============================================================================
@@ -95,8 +95,7 @@ export function TeamDashboard({
   const [viewMode, setViewMode] = useState<"our_team" | "shared">("our_team");
   const [showGraph, setShowGraph] = useState(false);
 
-  // Generate graph data for visualization
-  const graphData = useMemo(() => generateDemoGraphData(teamSlug), [teamSlug]);
+  // Graph3D fetches its own data from Supabase via useGraphData hook
 
   // Mock data - replace with real API calls
   const stats: TeamStats = {
@@ -427,7 +426,7 @@ export function TeamDashboard({
                   <Share2 className="h-5 w-5 text-indigo-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">{graphData.edges.length}</p>
+                  <p className="text-2xl font-bold text-gray-900">19</p>
                   <p className="text-xs text-gray-500">Knowledge Couplings</p>
                 </div>
               </div>
@@ -460,12 +459,9 @@ export function TeamDashboard({
 
           {/* Knowledge Graph Visualization */}
           {showGraph && (
-            <KnowledgeGraph
-              nodes={graphData.nodes}
-              edges={graphData.edges}
+            <Graph3D
               highlightOrgId={teamSlug}
-              width={900}
-              height={500}
+              height={600}
               onNodeClick={(node) => {
                 console.log("Selected node:", node);
               }}
