@@ -34,7 +34,7 @@ export default function App() {
   const { user, loading, signOut } = useAuth();
   const [currentSurface, setCurrentSurface] = useState<Surface>("mission-control");
   const [authView, setAuthView] = useState<AuthView>("login");
-  const [currentTeam, setCurrentTeam] = useState("Cal Poly Pomona");
+  const [currentTeam, setCurrentTeam] = useState("All Universities");
 
   // Graph visibility state
   const [graphVisible, setGraphVisible] = useState(false);
@@ -81,8 +81,9 @@ export default function App() {
   }
 
   // User is authenticated (or dev mode) - show main app
-  // PROVES partner universities
+  // PROVES partner universities - "All Universities" shows aggregate view
   const teams = [
+    "All Universities",
     "Cal Poly Pomona",
     "Columbia University",
     "Northeastern University",
