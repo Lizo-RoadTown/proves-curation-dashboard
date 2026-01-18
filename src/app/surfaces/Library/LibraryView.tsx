@@ -4,8 +4,10 @@
  * Layout:
  * - Search bar
  * - Facet filters
- * - 3D Knowledge Graph visualization
  * - Knowledge Map tiles
+ * - Stats summary
+ *
+ * Note: 3D Knowledge Graph is in Mission Control, not here.
  */
 
 import { useState, useCallback, useEffect } from "react";
@@ -13,7 +15,6 @@ import { SearchBar } from "./SearchBar";
 import { Facets, type FacetFilters } from "./Facets";
 import { KnowledgeMap, DEFAULT_TILES } from "./KnowledgeMap";
 import { TileIndexView, type IndexEntity } from "./TileIndexView";
-import { Graph3D } from "@/app/components/Graph3D";
 import { useLibrary } from "@/hooks/useLibrary";
 import { supabase } from "@/lib/supabase";
 import { Loader2 } from "lucide-react";
@@ -157,11 +158,11 @@ export function LibraryView() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-slate-900">
+    <div className="h-full flex flex-col bg-[#0f172a]">
       {/* Header */}
-      <div className="p-6 border-b border-slate-700">
-        <h1 className="text-xl font-semibold text-slate-100 mb-1">Knowledge Library</h1>
-        <p className="text-sm text-slate-400 mb-4">
+      <div className="p-6 border-b border-[#334155]">
+        <h1 className="text-xl font-semibold text-[#e2e8f0] mb-1">Knowledge Library</h1>
+        <p className="text-sm text-[#94a3b8] mb-4">
           Search and explore the collective knowledge base
         </p>
 
@@ -175,7 +176,7 @@ export function LibraryView() {
       </div>
 
       {/* Facets */}
-      <div className="px-6 py-3 border-b border-slate-700 bg-slate-800/30">
+      <div className="px-6 py-3 border-b border-[#334155] bg-[#1e293b]/30">
         <Facets filters={filters} onChange={setFilters} />
       </div>
 
@@ -183,7 +184,7 @@ export function LibraryView() {
       <div className="flex-1 overflow-y-auto p-6">
         {/* Error */}
         {error && (
-          <div className="mb-6 p-3 bg-slate-800 border border-slate-700 rounded text-slate-300 text-sm">
+          <div className="mb-6 p-3 bg-[#1e293b] border border-[#334155] rounded text-[#94a3b8] text-sm">
             {error}
           </div>
         )}
@@ -192,8 +193,8 @@ export function LibraryView() {
         {searchQuery && (
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-sm font-medium text-slate-300">Search Results</h2>
-              {searchLoading && <Loader2 className="w-4 h-4 animate-spin text-slate-500" />}
+              <h2 className="text-sm font-medium text-[#94a3b8]">Search Results</h2>
+              {searchLoading && <Loader2 className="w-4 h-4 animate-spin text-[#64748b]" />}
             </div>
 
             {searchResults.length > 0 ? (
@@ -202,15 +203,15 @@ export function LibraryView() {
                   <div
                     key={entity.id}
                     onClick={() => handleSelectEntity(entity)}
-                    className="p-3 bg-slate-800/50 border border-slate-700 rounded hover:border-slate-600 cursor-pointer transition-colors"
+                    className="p-3 bg-[#1e293b]/50 border border-[#334155] rounded hover:border-[#475569] cursor-pointer transition-colors"
                   >
-                    <h3 className="text-sm font-medium text-slate-200">{entity.name}</h3>
+                    <h3 className="text-sm font-medium text-[#e2e8f0]">{entity.name}</h3>
                     {entity.excerpt && (
-                      <p className="text-sm text-slate-500 mt-1 line-clamp-2">
+                      <p className="text-sm text-[#64748b] mt-1 line-clamp-2">
                         {entity.excerpt}
                       </p>
                     )}
-                    <div className="flex gap-3 mt-2 text-xs text-slate-500">
+                    <div className="flex gap-3 mt-2 text-xs text-[#64748b]">
                       <span>{entity.type}</span>
                       <span>{entity.domain}</span>
                     </div>
@@ -218,78 +219,27 @@ export function LibraryView() {
                 ))}
               </div>
             ) : !searchLoading ? (
-              <p className="text-sm text-slate-500">No results for "{searchQuery}"</p>
+              <p className="text-sm text-[#64748b]">No results for "{searchQuery}"</p>
             ) : null}
           </div>
         )}
 
-        {/* Knowledge Graph Section */}
-        <div className="mb-8">
-          <h2 className="text-sm font-medium text-slate-300 mb-4">Knowledge Graph</h2>
-
-          {/* Stats Summary */}
-          <div className="flex items-center gap-6 mb-4 text-sm">
-            <span className="text-slate-400">
-              <span className="text-slate-200 font-medium">{stats?.totalEntities || 0}</span> entities
-            </span>
-            <span className="text-slate-400">
-              <span className="text-slate-200 font-medium">{stats?.totalEdges || 0}</span> connections
-            </span>
-            <span className="text-slate-400">
-              <span className="text-slate-200 font-medium">{stats?.byOrg.length || 0}</span> teams
-            </span>
-          </div>
-
-          {/* 3D Graph */}
-          <div className="bg-slate-800/50 border border-slate-700 rounded overflow-hidden mb-6">
-            <Graph3D />
-          </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            {/* By Domain */}
-            <div className="bg-slate-800/50 border border-slate-700 rounded p-4">
-              <h3 className="text-sm font-medium text-slate-300 mb-3">By Domain</h3>
-              {statsLoading ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {stats?.byDomain.map((d) => (
-                    <div key={d.domain} className="flex items-center justify-between text-sm">
-                      <span className="text-slate-400">{d.domain}</span>
-                      <span className="text-slate-200">{d.count}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Contributing Teams */}
-            <div className="bg-slate-800/50 border border-slate-700 rounded p-4">
-              <h3 className="text-sm font-medium text-slate-300 mb-3">Contributing Teams</h3>
-              {statsLoading ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {stats?.byOrg.map((org) => (
-                    <div key={org.name} className="flex items-center justify-between text-sm">
-                      <span className="text-slate-400">{org.name}</span>
-                      <span className="text-slate-200">{org.count}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+        {/* Stats Summary */}
+        <div className="flex items-center gap-6 mb-6 text-sm">
+          <span className="text-[#94a3b8]">
+            <span className="text-[#e2e8f0] font-medium">{stats?.totalEntities || 0}</span> entities
+          </span>
+          <span className="text-[#94a3b8]">
+            <span className="text-[#e2e8f0] font-medium">{stats?.totalEdges || 0}</span> connections
+          </span>
+          <span className="text-[#94a3b8]">
+            <span className="text-[#e2e8f0] font-medium">{stats?.byOrg.length || 0}</span> teams
+          </span>
         </div>
 
         {/* Knowledge Map */}
         <div>
-          <h2 className="text-sm font-medium text-slate-300 mb-4">Browse by Category</h2>
+          <h2 className="text-sm font-medium text-[#94a3b8] mb-4">Browse by Category</h2>
           <KnowledgeMap
             tiles={tiles}
             onSelectTile={handleSelectTile}
