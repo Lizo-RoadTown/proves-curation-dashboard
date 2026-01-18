@@ -21,14 +21,8 @@ import { Button } from '@/app/components/ui/button';
 import { RefreshCw, Box, X, Circle, ArrowRight } from 'lucide-react';
 import { Badge } from '@/app/components/ui/badge';
 import { supabase } from '@/lib/supabase';
-import {
-  initMissionControlLayer,
-  updateMissionControlLayer,
-  disposeMissionControlLayer,
-  emitHeat,
-  type MissionControlLayer,
-  type MissionControlState,
-} from './MissionControl/MissionControlLayer';
+// Heat overlay for validation activity (lives in graph scene, as it's about graph nodes)
+import * as THREE from 'three';
 
 // =============================================================================
 // TYPES
@@ -38,14 +32,8 @@ interface Graph3DProps {
   highlightOrgId?: string;
   height?: number;
   className?: string;
-  /** Enable Mission Control instruments (pipelines, agent avatar, heat volume) */
-  enableMissionControl?: boolean;
-  /** Callback when scene is ready - provides access to Three.js context */
-  onSceneReady?: (ctx: {
-    scene: THREE.Scene;
-    camera: THREE.Camera;
-    renderer: THREE.WebGLRenderer;
-  }) => void;
+  /** Enable heat overlay for validation activity */
+  enableHeatOverlay?: boolean;
 }
 
 interface Node3D {
@@ -86,12 +74,10 @@ export function Graph3D({
   highlightOrgId,
   height = 600,
   className = '',
-  enableMissionControl = false,
-  onSceneReady,
+  enableHeatOverlay = false,
 }: Graph3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<any>(null);
-  const mcLayerRef = useRef<MissionControlLayer | null>(null);
   const nodesMapRef = useRef<Map<string, Node3D>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -101,21 +87,6 @@ export function Graph3D({
   const autoRotateRef = useRef(true);
   const [selected, setSelected] = useState<SelectedItem>(null);
   const selectedRef = useRef<SelectedItem>(null);
-
-  // Mission Control state (would come from Supabase realtime in production)
-  const [mcState, setMcState] = useState<MissionControlState>({
-    pipelines: {
-      inbound: { rate: 1.2, latencyMs: 350, status: 'healthy' },
-      outbound: { rate: 0.8, latencyMs: 420, status: 'healthy' },
-    },
-    agent: {
-      health: 0.95,
-      confidence: 0.88,
-      drift: 0.05,
-      errorRate: 0.02,
-    },
-    heat: [],
-  });
 
   // Keep selected ref in sync
   useEffect(() => {
@@ -217,26 +188,11 @@ export function Graph3D({
         const camera = graph.camera() as THREE.Camera;
         const renderer = graph.renderer() as THREE.WebGLRenderer;
 
-        // Notify parent if callback provided
-        if (onSceneReady) {
-          onSceneReady({ scene, camera, renderer });
-        }
-
-        // Initialize Mission Control layer if enabled
-        if (enableMissionControl && scene && camera && renderer) {
-          mcLayerRef.current = initMissionControlLayer(scene, camera, renderer);
-        }
-
-        // Animation loop for auto-rotate and Mission Control updates
+        // Animation loop for auto-rotate
         let angle = 0;
-        let lastTime = performance.now();
 
         const animate = () => {
           if (destroyed) return;
-
-          const now = performance.now();
-          const dt = (now - lastTime) / 1000; // delta time in seconds
-          lastTime = now;
 
           // Auto-rotate camera
           if (autoRotateRef.current && graphRef.current) {
@@ -246,11 +202,6 @@ export function Graph3D({
               y: 100,
               z: 400 * Math.cos(angle),
             });
-          }
-
-          // Update Mission Control instruments
-          if (mcLayerRef.current) {
-            updateMissionControlLayer(mcLayerRef.current, mcState, dt);
           }
 
           requestAnimationFrame(animate);
@@ -271,14 +222,9 @@ export function Graph3D({
 
     return () => {
       destroyed = true;
-      // Dispose Mission Control layer
-      if (mcLayerRef.current) {
-        disposeMissionControlLayer(mcLayerRef.current);
-        mcLayerRef.current = null;
-      }
       if (graphRef.current?._destructor) graphRef.current._destructor();
     };
-  }, [height, enableMissionControl]); // Re-run if height or MC toggle changes
+  }, [height]); // Re-run if height changes
 
   // Manual refresh
   const handleRefresh = async () => {
@@ -513,20 +459,6 @@ export function Graph3D({
       )}
     </Card>
   );
-}
-
-// Export helper to emit heat at a node position (for realtime validation events)
-export function emitHeatAtNode(
-  layer: MissionControlLayer | null,
-  nodeId: string,
-  nodesMap: Map<string, Node3D>,
-  intensity: number = 0.8
-): void {
-  if (!layer) return;
-  const node = nodesMap.get(nodeId);
-  if (node && node.x !== undefined && node.y !== undefined && node.z !== undefined) {
-    emitHeat(layer.heat, new THREE.Vector3(node.x, node.y, node.z), intensity);
-  }
 }
 
 export default Graph3D;

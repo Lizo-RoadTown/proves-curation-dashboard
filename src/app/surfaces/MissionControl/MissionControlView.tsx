@@ -4,12 +4,16 @@
  * A read-only, shared, live space for situational awareness across all teams.
  * Not a workspace - a place to watch the system breathe.
  *
- * The Knowledge Graph dominates the view (full-width), with Mission Control
- * instruments layered directly into the 3D scene:
+ * Layout: 4-pane grid
+ * ┌─────────────────────────────────────┬──────────────┐
+ * │                                     │  Pipelines   │
+ * │         Knowledge Graph             │  (in/out)    │
+ * │         (largest pane)              ├──────────────┤
+ * │                                     │    Agent     │
+ * │                                     │   Avatar     │
+ * └─────────────────────────────────────┴──────────────┘
  *
- * - PipelineStreams: Animated particles flowing along curves (inbound/outbound)
- * - AgentAvatar: Single 3D object encoding health/confidence/drift/error via motion
- * - HeatVolume: Point sprites showing validation activity around nodes
+ * Each panel is its own rendering context - NOT world-positioned in 3D space.
  *
  * Rules:
  * - No editing, no forms
@@ -20,11 +24,11 @@
 
 import { useState, useEffect } from "react";
 import { Graph3D } from "@/app/components/Graph3D";
+import { PipelinePanel } from "./PipelinePanel";
+import { AgentAvatarPanel } from "./AgentAvatarPanel";
 
 export function MissionControlView() {
   const [lastUpdate, setLastUpdate] = useState(new Date());
-  const [depthFilter, setDepthFilter] = useState<1 | 2 | 3>(2);
-  const [showCandidates, setShowCandidates] = useState(false);
 
   // Update timestamp every second
   useEffect(() => {
@@ -32,9 +36,22 @@ export function MissionControlView() {
     return () => clearInterval(interval);
   }, []);
 
+  // Mock state - would come from Supabase realtime
+  const pipelineState = {
+    inbound: { rate: 1.2, latencyMs: 350, status: 'healthy' as const },
+    outbound: { rate: 0.8, latencyMs: 420, status: 'healthy' as const },
+  };
+
+  const agentState = {
+    health: 0.95,
+    confidence: 0.88,
+    drift: 0.05,
+    errorRate: 0.02,
+  };
+
   return (
     <div className="h-full bg-[#0f172a] overflow-hidden flex flex-col">
-      {/* Header - Stream Status */}
+      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[#334155]">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
@@ -48,61 +65,34 @@ export function MissionControlView() {
             Last update: {lastUpdate.toLocaleTimeString()}
           </span>
         </div>
-
-        {/* Graph density controls */}
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 text-xs text-[#94a3b8]">
-            <input
-              type="checkbox"
-              checked={!showCandidates}
-              onChange={(e) => setShowCandidates(!e.target.checked)}
-              className="rounded border-[#334155] bg-[#1e293b] text-[#06b6d4] focus:ring-[#06b6d4]"
-            />
-            Verified only
-          </label>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[#64748b]">Depth:</span>
-            {[1, 2, 3].map((d) => (
-              <button
-                key={d}
-                onClick={() => setDepthFilter(d as 1 | 2 | 3)}
-                className={`w-6 h-6 text-xs rounded ${
-                  depthFilter === d
-                    ? "bg-[#06b6d4] text-[#0f172a] font-semibold"
-                    : "bg-[#1e293b] text-[#64748b] hover:bg-[#334155]"
-                }`}
-              >
-                {d}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
-      {/* Full-width Knowledge Graph with Mission Control instruments */}
-      <div className="flex-1 relative">
-        <Graph3D
-          height={window.innerHeight - 60}
-          className="w-full h-full border-0 rounded-none"
-          enableMissionControl={true}
-        />
+      {/* 4-Pane Grid */}
+      <div className="flex-1 grid grid-cols-[1fr_320px] grid-rows-2 gap-1 p-1">
+        {/* Knowledge Graph - spans both rows on left */}
+        <div className="row-span-2 bg-[#0f172a] rounded-lg overflow-hidden border border-[#334155]">
+          <Graph3D
+            height={window.innerHeight - 70}
+            className="w-full h-full border-0 rounded-none"
+          />
+        </div>
 
-        {/* Legend overlay - minimal, non-intrusive */}
-        <div className="absolute bottom-4 right-4 bg-[#0f172a]/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-[#334155]">
-          <div className="flex items-center gap-4 text-[10px] text-[#64748b]">
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-[#06b6d4]"></span>
-              <span>Inbound</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-[#22c55e]"></span>
-              <span>Outbound</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-[#0ea5e9]"></span>
-              <span>Agent</span>
-            </div>
-          </div>
+        {/* Pipeline Panel - top right */}
+        <div className="bg-[#0f172a] rounded-lg overflow-hidden border border-[#334155]">
+          <PipelinePanel
+            inbound={pipelineState.inbound}
+            outbound={pipelineState.outbound}
+          />
+        </div>
+
+        {/* Agent Avatar Panel - bottom right */}
+        <div className="bg-[#0f172a] rounded-lg overflow-hidden border border-[#334155]">
+          <AgentAvatarPanel
+            health={agentState.health}
+            confidence={agentState.confidence}
+            drift={agentState.drift}
+            errorRate={agentState.errorRate}
+          />
         </div>
       </div>
     </div>
