@@ -1,13 +1,21 @@
 /**
- * AdminView - Admin Interface
+ * AdminView - Admin Interface (Tenant-Scoped)
  *
  * Dashboard-first navigation with drill-down sections.
+ * All data is scoped to the current user's organization.
+ *
+ * CRITICAL: This view shows ONLY the logged-in user's organization's data.
+ * - Their sources
+ * - Their extraction candidates
+ * - Their review queue
+ * - Their agent health
  */
 
-import { useState } from "react";
-import { RefreshCw, ArrowLeft, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { RefreshCw, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { useReviewExtractions } from "@/hooks/useReviewExtractions";
 import { useSources } from "@/hooks/useSources";
+import { useCurrentOrganization } from "@/hooks/useCurrentOrganization";
 import { ExtractionDetail } from "@/app/components/ExtractionDetail";
 import { EngineerReview } from "@/app/components/EngineerReview";
 import { SourcesSection } from "./SourcesSection";
@@ -24,7 +32,14 @@ export function AdminView() {
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [viewMode, setViewMode] = useState<"simple" | "detailed">("simple");
 
-  // Review extractions
+  // CRITICAL: Get current user's organization for tenant isolation
+  const {
+    currentOrg,
+    loading: orgLoading,
+    error: orgError,
+  } = useCurrentOrganization();
+
+  // Review extractions - MUST be scoped to organization
   const {
     extractions,
     loading,
@@ -51,6 +66,16 @@ export function AdminView() {
     toggleSourceActive,
   } = useSources();
 
+  // Fetch extractions when organization changes - TENANT ISOLATION
+  useEffect(() => {
+    if (currentOrg?.org_id) {
+      fetchExtractions({
+        status: statusFilter || undefined,
+        organizationId: currentOrg.org_id,
+      });
+    }
+  }, [currentOrg?.org_id, fetchExtractions]);
+
   const handleViewExtraction = (id: string) => {
     setSelectedExtractionId(id);
   };
@@ -62,7 +87,13 @@ export function AdminView() {
 
   const handleFilterChange = (status: string) => {
     setStatusFilter(status);
-    fetchExtractions({ status: status || undefined });
+    // CRITICAL: Always include organizationId for tenant isolation
+    if (currentOrg?.org_id) {
+      fetchExtractions({
+        status: status || undefined,
+        organizationId: currentOrg.org_id,
+      });
+    }
   };
 
   // If viewing a specific extraction, show the detail view
@@ -117,14 +148,41 @@ export function AdminView() {
     </button>
   );
 
+  // Show loading state while fetching organization
+  if (orgLoading) {
+    return (
+      <div className="h-full flex items-center justify-center bg-slate-900">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-slate-500 animate-spin" />
+          <span className="text-sm text-slate-400">Loading organization...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if org failed to load
+  if (orgError || !currentOrg) {
+    return (
+      <div className="h-full flex items-center justify-center bg-slate-900">
+        <div className="flex flex-col items-center gap-3 p-6 bg-slate-800/50 border border-slate-700 rounded-lg max-w-md text-center">
+          <AlertCircle className="w-8 h-8 text-amber-500" />
+          <h2 className="text-lg font-medium text-slate-100">Organization Required</h2>
+          <p className="text-sm text-slate-400">
+            {orgError || "You must be a member of an organization to access the Admin view."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full overflow-y-auto bg-slate-900">
       {/* Dashboard is the main view */}
       {activeSection === "dashboard" && (
         <TeamDashboard
-          teamName="Cal Poly Pomona"
-          teamSlug="cal-poly-pomona"
-          userRole="lead"
+          teamName={currentOrg.org_name}
+          teamSlug={currentOrg.org_slug}
+          userRole={currentOrg.user_role}
           sources={sources}
           sourcesLoading={sourcesLoading}
           onNavigateToReview={() => setActiveSection("review")}

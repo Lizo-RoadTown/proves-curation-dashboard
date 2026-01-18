@@ -47,6 +47,7 @@ interface ExtractionFilters {
   ecosystem?: string
   candidateType?: string
   limit?: number
+  organizationId?: string  // Filter by source_organization_id for tenant isolation
 }
 
 // =============================================================================
@@ -191,6 +192,12 @@ export function useReviewExtractions(): UseReviewExtractionsResult {
 
       if (filters?.candidateType) {
         query = query.eq('candidate_type', filters.candidateType)
+      }
+
+      // CRITICAL: Filter by organization for tenant isolation
+      // In Admin view, this MUST be set to the user's organization
+      if (filters?.organizationId) {
+        query = query.eq('source_organization_id', filters.organizationId)
       }
 
       // Order and limit
