@@ -1,20 +1,12 @@
 import { useState } from "react";
 import {
-  Database,
   RefreshCw,
-  BarChart3,
-  Shield,
-  Plus,
-  ExternalLink,
   AlertCircle,
   CheckCircle,
   Clock,
   FileCheck,
   ArrowRight,
   Filter,
-  HelpCircle,
-  Building2,
-  Home,
 } from "lucide-react";
 import { useReviewExtractions } from "@/hooks/useReviewExtractions";
 import { useSources } from "@/hooks/useSources";
@@ -61,15 +53,6 @@ export function AdminView() {
     triggerCrawl,
     toggleSourceActive,
   } = useSources();
-
-  const sections = [
-    { id: "dashboard" as const, label: "Dashboard", icon: Home, description: "Team overview & contributions" },
-    { id: "review" as const, label: "Review Queue", icon: FileCheck, description: "Approve/reject extractions", badge: extractions.length },
-    { id: "sources" as const, label: "Sources", icon: Database, description: "Connected repos, drives, discord" },
-    { id: "ingestion" as const, label: "Ingestion", icon: RefreshCw, description: "Crawl status, refresh cadence" },
-    { id: "health" as const, label: "Index Health", icon: BarChart3, description: "Coverage, drift, duplicates" },
-    { id: "policy" as const, label: "Policy", icon: Shield, description: "Approval rules, permissions" },
-  ];
 
   const getConfidenceColor = (score: number) => {
     if (score >= 0.8) return "text-green-600 bg-green-50";
@@ -136,57 +119,42 @@ export function AdminView() {
     );
   }
 
+  // Dashboard is the main view, sections are drill-downs with back button
+  const renderBackButton = () => (
+    <button
+      onClick={() => setActiveSection("dashboard")}
+      className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4"
+    >
+      <ArrowRight className="w-4 h-4 rotate-180" />
+      Back to Dashboard
+    </button>
+  );
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Admin</h1>
-      <p className="text-gray-600 mb-6">
-        Review extractions and manage collective knowledge sources
-      </p>
-
-      {/* Section Tabs */}
-      <div className="flex gap-2 mb-6 border-b border-gray-200 overflow-x-auto">
-        {sections.map((section) => {
-          const Icon = section.icon;
-          const isActive = activeSection === section.id;
-          return (
-            <button
-              key={section.id}
-              onClick={() => setActiveSection(section.id)}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
-                isActive
-                  ? "text-blue-600 border-blue-600"
-                  : "text-gray-600 border-transparent hover:text-gray-900"
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {section.label}
-              {section.badge !== undefined && section.badge > 0 && (
-                <span className="ml-1 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
-                  {section.badge}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Section Content */}
+    <div className="h-full overflow-y-auto">
+      {/* Dashboard is the main view */}
       {activeSection === "dashboard" && (
         <TeamDashboard
           teamName="PROVES Lab"
           teamSlug="proves-lab"
           userRole="lead"
+          sources={sources}
+          sourcesLoading={sourcesLoading}
           onNavigateToReview={() => setActiveSection("review")}
           onNavigateToSources={() => setActiveSection("sources")}
+          onNavigateToIngestion={() => setActiveSection("ingestion")}
+          onNavigateToHealth={() => setActiveSection("health")}
+          onNavigateToPolicy={() => setActiveSection("policy")}
         />
       )}
 
       {activeSection === "review" && (
-        <div>
+        <div className="p-6">
+          {renderBackButton()}
           {/* Filters and Actions */}
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-3">
-              <h2 className="text-lg font-semibold text-gray-900">Pending Extractions</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Review Queue</h2>
               <div className="flex items-center gap-2">
                 <Filter className="w-4 h-4 text-gray-400" />
                 <select
@@ -270,34 +238,41 @@ export function AdminView() {
       )}
 
       {activeSection === "sources" && (
-        <SourcesSection
-          sources={sources}
-          loading={sourcesLoading}
-          error={sourcesError}
-          onCreateSource={createSource}
-          onUpdateSource={updateSource}
-          onDeleteSource={deleteSource}
-          onTriggerCrawl={triggerCrawl}
-          onToggleActive={toggleSourceActive}
-          onRefresh={fetchSources}
-        />
+        <div className="p-6">
+          {renderBackButton()}
+          <SourcesSection
+            sources={sources}
+            loading={sourcesLoading}
+            error={sourcesError}
+            onCreateSource={createSource}
+            onUpdateSource={updateSource}
+            onDeleteSource={deleteSource}
+            onTriggerCrawl={triggerCrawl}
+            onToggleActive={toggleSourceActive}
+            onRefresh={fetchSources}
+          />
+        </div>
       )}
 
       {activeSection === "ingestion" && (
-        <IngestionSection
-          jobs={recentJobs}
-          stats={stats}
-          sources={sources}
-          loading={sourcesLoading}
-          onRefresh={() => {
-            fetchRecentJobs();
-            fetchStats();
-          }}
-        />
+        <div className="p-6">
+          {renderBackButton()}
+          <IngestionSection
+            jobs={recentJobs}
+            stats={stats}
+            sources={sources}
+            loading={sourcesLoading}
+            onRefresh={() => {
+              fetchRecentJobs();
+              fetchStats();
+            }}
+          />
+        </div>
       )}
 
       {activeSection === "health" && (
-        <div>
+        <div className="p-6">
+          {renderBackButton()}
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Index Health</h2>
 
           {/* Coverage by Domain */}
@@ -346,7 +321,8 @@ export function AdminView() {
       )}
 
       {activeSection === "policy" && (
-        <div>
+        <div className="p-6">
+          {renderBackButton()}
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Ingestion Policy</h2>
 
           <div className="space-y-4">

@@ -26,6 +26,9 @@ import {
   Plus,
   ChevronRight,
   Bot,
+  RefreshCw,
+  BarChart3,
+  Shield,
 } from "lucide-react";
 import { Card } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
@@ -72,37 +75,51 @@ interface TeamDashboardProps {
   teamName: string;
   teamSlug: string;
   userRole: string;
+  sources?: any[]; // Real sources from useSources hook
+  sourcesLoading?: boolean;
   onNavigateToReview: () => void;
   onNavigateToSources: () => void;
+  onNavigateToIngestion?: () => void;
+  onNavigateToHealth?: () => void;
+  onNavigateToPolicy?: () => void;
 }
 
 export function TeamDashboard({
   teamName,
   teamSlug,
   userRole,
+  sources = [],
+  sourcesLoading = false,
   onNavigateToReview,
   onNavigateToSources,
+  onNavigateToIngestion,
+  onNavigateToHealth,
+  onNavigateToPolicy,
 }: TeamDashboardProps) {
-  // Mock data - replace with real API calls
+  // Use real sources data when available, otherwise show empty state
   const stats: TeamStats = {
-    our_sources: 5,
-    our_pending_reviews: 12,
-    our_verified_this_week: 34,
-    our_total_contributed: 156,
-    our_contributors: 8,
+    our_sources: sources.length,
+    our_pending_reviews: 0, // TODO: Get from extractions
+    our_verified_this_week: 0, // TODO: Get from verified entities
+    our_total_contributed: 0, // TODO: Get from core_entities count
+    our_contributors: 8, // TODO: Get from team members
   };
 
-  const pendingReviews: PendingReviewItem[] = [
-    { id: "1", type: "coupling", name: "GPS → Flight Computer", source_name: "PROVES Kit Docs", confidence: 0.87, created_at: "2h ago" },
-    { id: "2", type: "component", name: "OrbitFSW", source_name: "GitHub - proves-kit", confidence: 0.92, created_at: "3h ago" },
-    { id: "3", type: "interface", name: "I2C Bus Protocol", source_name: "Discord #hardware", confidence: 0.75, created_at: "5h ago" },
-  ];
+  // TODO: Replace with real pending reviews from useReviewExtractions
+  const pendingReviews: PendingReviewItem[] = [];
 
-  const teamSources: TeamSource[] = [
-    { id: "1", name: "proves-kit", type: "github", status: "active", last_crawl: "2h ago", entities_found: 89, pending_reviews: 4 },
-    { id: "2", name: "PROVES Notion", type: "notion", status: "active", last_crawl: "1d ago", entities_found: 45, pending_reviews: 3 },
-    { id: "3", name: "#hardware Discord", type: "discord", status: "active", last_crawl: "30m ago", entities_found: 23, pending_reviews: 5 },
-  ];
+  // Transform real sources to TeamSource format
+  const teamSources: TeamSource[] = sources.map((s: any) => ({
+    id: s.id,
+    name: s.name,
+    type: s.source_type?.includes('github') ? 'github' :
+          s.source_type?.includes('notion') ? 'notion' :
+          s.source_type?.includes('discord') ? 'discord' : 'github',
+    status: s.is_active ? 'active' : 'paused',
+    last_crawl: s.last_crawl_at ? formatRelativeTime(s.last_crawl_at) : 'Never',
+    entities_found: s.item_count || 0,
+    pending_reviews: 0, // TODO: Get pending count per source
+  }));
 
   return (
     <div className="p-6 space-y-6">
@@ -330,7 +347,66 @@ export function TeamDashboard({
               </p>
             </Card>
           </div>
+
+          {/* Admin Quick Links */}
+          <Card className="p-4">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Admin Tools</h2>
+            <div className="grid grid-cols-3 gap-4">
+              {onNavigateToIngestion && (
+                <button
+                  onClick={onNavigateToIngestion}
+                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left"
+                >
+                  <RefreshCw className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">Ingestion</p>
+                    <p className="text-xs text-gray-500">Crawl status & jobs</p>
+                  </div>
+                </button>
+              )}
+              {onNavigateToHealth && (
+                <button
+                  onClick={onNavigateToHealth}
+                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left"
+                >
+                  <BarChart3 className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">Index Health</p>
+                    <p className="text-xs text-gray-500">Coverage & drift</p>
+                  </div>
+                </button>
+              )}
+              {onNavigateToPolicy && (
+                <button
+                  onClick={onNavigateToPolicy}
+                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left"
+                >
+                  <Shield className="h-5 w-5 text-purple-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">Policy</p>
+                    <p className="text-xs text-gray-500">Auto-approval rules</p>
+                  </div>
+                </button>
+              )}
+            </div>
+          </Card>
         </div>
     </div>
   );
+}
+
+// Helper function
+function formatRelativeTime(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+  if (diffMinutes < 1) return 'just now';
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
 }
