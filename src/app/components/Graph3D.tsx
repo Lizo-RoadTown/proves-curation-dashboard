@@ -236,20 +236,29 @@ export function Graph3D({
       })
       .onNodeHover((node: Node3D | null) => {
         containerRef.current!.style.cursor = node ? 'pointer' : 'default';
-      })
-      // Force configuration for better clustering
-      .d3Force('charge')?.strength(-120)
-      .d3Force('link')?.distance(80)
-      .d3Force('center')?.strength(0.05);
+      });
+
+    // Force configuration for better clustering
+    const chargeForce = graph.d3Force('charge');
+    if (chargeForce) chargeForce.strength(-120);
+
+    const linkForce = graph.d3Force('link');
+    if (linkForce) linkForce.distance(80);
+
+    const centerForce = graph.d3Force('center');
+    if (centerForce) centerForce.strength(0.05);
 
     // Add category-based Z positioning
     graph.d3Force('z', (alpha: number) => {
-      graphData.nodes.forEach((node) => {
-        const targetZ = CATEGORY_Z_OFFSET[node.category] || 0;
-        if (node.z !== undefined) {
-          node.z += (targetZ - node.z) * alpha * 0.1;
-        }
-      });
+      const data = graph.graphData();
+      if (data && data.nodes) {
+        data.nodes.forEach((node: Node3D) => {
+          const targetZ = CATEGORY_Z_OFFSET[node.category] || 0;
+          if (node.z !== undefined) {
+            node.z += (targetZ - node.z) * alpha * 0.1;
+          }
+        });
+      }
     });
 
     graphRef.current = graph;
