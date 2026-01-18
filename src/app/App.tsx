@@ -26,7 +26,7 @@ export default function App() {
   const { user, loading, signOut } = useAuth();
   const [currentSurface, setCurrentSurface] = useState<Surface>("library");
   const [authView, setAuthView] = useState<AuthView>("login");
-  const [currentTeam, setCurrentTeam] = useState("PROVES Lab");
+  const [currentTeam, setCurrentTeam] = useState("Cal Poly Pomona");
 
   // Show loading spinner while checking auth state (skip in dev mode)
   if (loading && !DEV_SKIP_AUTH) {
@@ -49,7 +49,14 @@ export default function App() {
   }
 
   // User is authenticated (or dev mode) - show main app
-  const teams = ["PROVES Lab", "CubeSat Team", "Research Group"];
+  // PROVES partner universities
+  const teams = [
+    "Cal Poly Pomona",
+    "Columbia University",
+    "Northeastern University",
+    "UC Santa Cruz",
+    "Texas State University",
+  ];
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || "Dev User";
   const userRole = "lead";
   const pendingCount = 0;
