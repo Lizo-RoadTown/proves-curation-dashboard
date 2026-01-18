@@ -13,8 +13,9 @@ import { SearchBar } from "./SearchBar";
 import { Facets, type FacetFilters } from "./Facets";
 import { KnowledgeMap, DEFAULT_TILES } from "./KnowledgeMap";
 import { TileIndexView, type IndexEntity } from "./TileIndexView";
+import { Graph3D } from "@/app/components/Graph3D";
 import { useLibrary } from "@/hooks/useLibrary";
-import { Loader2, Search, AlertCircle } from "lucide-react";
+import { Loader2, Search, AlertCircle, Network } from "lucide-react";
 
 export function LibraryView() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -154,6 +155,21 @@ export function LibraryView() {
             ) : null}
           </div>
         )}
+
+        {/* 3D Knowledge Graph - The Shared Library */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Network className="w-5 h-5 text-blue-600" />
+            Shared Knowledge Graph
+          </h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Explore the collective knowledge from all contributing organizations.
+            Click on nodes to see details, drag to rotate, scroll to zoom.
+          </p>
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+            <Graph3D />
+          </div>
+        </div>
 
         {/* Knowledge Map */}
         <div>
