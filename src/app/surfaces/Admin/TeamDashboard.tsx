@@ -1,15 +1,19 @@
 /**
- * TeamDashboard - Multi-tenant view for university/team contributions
+ * TeamDashboard - Admin view for managing team contributions
  *
- * Shows:
- * 1. OUR TEAM - Sources we contribute, our review queue, our verified items
- * 2. SHARED LIBRARY - Community knowledge we can access
+ * Shows YOUR TEAM's:
+ * - Sources you contribute
+ * - Your review queue (pending extractions)
+ * - Your verified items
+ * - Team members/contributors
+ *
+ * The Shared Library view has moved to the Library tab.
  *
  * Key insight: Extractions from YOUR sources go to YOUR review queue.
  * Once verified by you, they flow to the shared library.
  */
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import {
   Building2,
   Users,
@@ -18,22 +22,14 @@ import {
   Globe,
   ArrowRight,
   CheckCircle,
-  Clock,
-  AlertCircle,
   Network,
   Plus,
-  RefreshCw,
   ChevronRight,
-  Eye,
-  Filter,
-  BarChart3,
-  Share2,
   Bot,
 } from "lucide-react";
 import { Card } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Badge } from "@/app/components/ui/badge";
-import { Graph3D } from "@/app/components/Graph3D";
 import { ActivityFeedCompact } from "@/app/components/ActivityFeed";
 
 // =============================================================================
@@ -47,11 +43,6 @@ interface TeamStats {
   our_verified_this_week: number;
   our_total_contributed: number;
   our_contributors: number;
-
-  // Shared library access
-  shared_total_entities: number;
-  shared_from_us: number;
-  shared_from_others: number;
 }
 
 interface PendingReviewItem {
@@ -92,11 +83,6 @@ export function TeamDashboard({
   onNavigateToReview,
   onNavigateToSources,
 }: TeamDashboardProps) {
-  const [viewMode, setViewMode] = useState<"our_team" | "shared">("our_team");
-  const [showGraph, setShowGraph] = useState(false);
-
-  // Graph3D fetches its own data from Supabase via useGraphData hook
-
   // Mock data - replace with real API calls
   const stats: TeamStats = {
     our_sources: 5,
@@ -104,9 +90,6 @@ export function TeamDashboard({
     our_verified_this_week: 34,
     our_total_contributed: 156,
     our_contributors: 8,
-    shared_total_entities: 1247,
-    shared_from_us: 156,
-    shared_from_others: 1091,
   };
 
   const pendingReviews: PendingReviewItem[] = [
@@ -124,46 +107,13 @@ export function TeamDashboard({
   return (
     <div className="p-6 space-y-6">
       {/* Header with Team Context */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <Building2 className="h-6 w-6 text-blue-600" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{teamName}</h1>
-            <p className="text-sm text-gray-500">Your team's contributions to the collective brain</p>
-          </div>
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-blue-100 rounded-lg">
+          <Building2 className="h-6 w-6 text-blue-600" />
         </div>
-
-        {/* View Toggle */}
-        <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
-          <button
-            onClick={() => setViewMode("our_team")}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-all flex items-center gap-2 ${
-              viewMode === "our_team"
-                ? "bg-white text-blue-700 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            <Building2 className="h-4 w-4" />
-            Our Team
-            {stats.our_pending_reviews > 0 && (
-              <span className="px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
-                {stats.our_pending_reviews}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setViewMode("shared")}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-all flex items-center gap-2 ${
-              viewMode === "shared"
-                ? "bg-white text-purple-700 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            <Globe className="h-4 w-4" />
-            Shared Library
-          </button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">{teamName}</h1>
+          <p className="text-sm text-gray-500">Manage your team's contributions to the shared library</p>
         </div>
       </div>
 
@@ -202,9 +152,8 @@ export function TeamDashboard({
         </div>
       </Card>
 
-      {viewMode === "our_team" ? (
-        /* OUR TEAM VIEW */
-        <div className="space-y-6">
+      {/* Team Management */}
+      <div className="space-y-6">
           {/* Quick Stats */}
           <div className="grid grid-cols-4 gap-4">
             <Card className="p-4">
@@ -382,179 +331,6 @@ export function TeamDashboard({
             </Card>
           </div>
         </div>
-      ) : (
-        /* SHARED LIBRARY VIEW */
-        <div className="space-y-6">
-          {/* Shared Stats */}
-          <div className="grid grid-cols-4 gap-4">
-            <Card className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Globe className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats.shared_total_entities}</p>
-                  <p className="text-xs text-gray-500">Total Shared Entities</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Building2 className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats.shared_from_us}</p>
-                  <p className="text-xs text-gray-500">From Our Team</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Users className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats.shared_from_others}</p>
-                  <p className="text-xs text-gray-500">From Other Teams</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-100 rounded-lg">
-                  <Share2 className="h-5 w-5 text-indigo-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">19</p>
-                  <p className="text-xs text-gray-500">Knowledge Couplings</p>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Graph Toggle */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <Network className="h-5 w-5 text-purple-600" />
-              The Collective Brain
-            </h2>
-            <Button
-              variant={showGraph ? "default" : "outline"}
-              onClick={() => setShowGraph(!showGraph)}
-            >
-              {showGraph ? (
-                <>
-                  <Eye className="h-4 w-4 mr-2" />
-                  Hide Graph
-                </>
-              ) : (
-                <>
-                  <Network className="h-4 w-4 mr-2" />
-                  View Knowledge Graph
-                </>
-              )}
-            </Button>
-          </div>
-
-          {/* Knowledge Graph Visualization */}
-          {showGraph && (
-            <Graph3D
-              highlightOrgId={teamSlug}
-              height={600}
-              onNodeClick={(node) => {
-                console.log("Selected node:", node);
-              }}
-              onEdgeClick={(edge) => {
-                console.log("Selected edge:", edge);
-              }}
-            />
-          )}
-
-          {/* What You Can Access */}
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Shared Community Knowledge</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              All verified knowledge from all teams is accessible to you. Your team's contributions are highlighted in the graph above.
-            </p>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <h3 className="font-medium text-gray-900 mb-2">By Domain</h3>
-                <div className="space-y-2">
-                  {[
-                    { domain: "Operations", count: 423, color: "bg-green-500" },
-                    { domain: "Software", count: 356, color: "bg-blue-500" },
-                    { domain: "Hardware", count: 289, color: "bg-yellow-500" },
-                    { domain: "Process", count: 179, color: "bg-purple-500" },
-                  ].map((d) => (
-                    <div key={d.domain} className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">{d.domain}</span>
-                      <div className="flex items-center gap-2">
-                        <div className={`w-16 h-2 ${d.color} rounded-full opacity-60`}
-                             style={{ width: `${(d.count / 500) * 64}px` }} />
-                        <span className="text-sm font-medium text-gray-900">{d.count}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <h3 className="font-medium text-gray-900 mb-2">Contributing Teams</h3>
-                <div className="space-y-2">
-                  {[
-                    { team: "PROVES Lab", count: 156, color: "#3b82f6" },
-                    { team: "University A", count: 423, color: "#8b5cf6" },
-                    { team: "University B", count: 312, color: "#ec4899" },
-                    { team: "Research Group C", count: 356, color: "#f59e0b" },
-                  ].map((t) => (
-                    <div key={t.team} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: t.color }} />
-                        <span className="text-sm text-gray-600">{t.team}</span>
-                      </div>
-                      <span className="text-sm font-medium text-gray-900">{t.count}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* How Graph Works */}
-          <Card className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
-            <div className="flex items-start gap-3">
-              <Network className="h-5 w-5 text-purple-600 mt-0.5" />
-              <div>
-                <h3 className="font-medium text-purple-900">How the Knowledge Graph Works</h3>
-                <p className="text-sm text-purple-700 mt-1">
-                  Each node represents a component, system, or procedure. Edges represent knowledge couplings -
-                  how things connect, depend on, or flow to each other. <strong>Edge thickness shows coupling strength.</strong>
-                  Your team's contributions are highlighted with dashed rings.
-                </p>
-                <p className="text-sm text-purple-700 mt-2">
-                  <strong>This is the collective brain.</strong> The more teams contribute, the more complete our shared understanding becomes.
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          {/* How to Contribute */}
-          <Card className="p-4 bg-blue-50 border-blue-200">
-            <div className="flex items-start gap-3">
-              <Plus className="h-5 w-5 text-blue-600 mt-0.5" />
-              <div>
-                <h3 className="font-medium text-blue-900">Want to contribute more?</h3>
-                <p className="text-sm text-blue-700 mt-1">
-                  Add more sources in the "Our Team" view. Your verified extractions automatically flow to the shared library
-                  and appear in the graph as new nodes and edges.
-                </p>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
     </div>
   );
 }
