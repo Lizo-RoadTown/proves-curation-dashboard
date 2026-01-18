@@ -32,7 +32,7 @@ const GRAPH_PINNED_KEY = "proves_graph_pinned";
 
 export default function App() {
   const { user, loading, signOut } = useAuth();
-  const [currentSurface, setCurrentSurface] = useState<Surface>("library");
+  const [currentSurface, setCurrentSurface] = useState<Surface>("mission-control");
   const [authView, setAuthView] = useState<AuthView>("login");
   const [currentTeam, setCurrentTeam] = useState("Cal Poly Pomona");
 
@@ -52,18 +52,11 @@ export default function App() {
   // Graph visibility defaults per surface
   useEffect(() => {
     if (currentSurface === "mission-control") {
-      // Always on in Mission Control
+      // Always on in Mission Control (embedded in the view)
       setGraphVisible(true);
-    } else if (currentSurface === "admin") {
-      // On by default in Admin (Extraction Validation)
-      if (!graphPinned) {
-        setGraphVisible(true);
-      }
-    } else {
-      // Off by default in Library, unless pinned
-      if (!graphPinned) {
-        setGraphVisible(false);
-      }
+    } else if (!graphPinned) {
+      // Off by default in Library and Admin, unless pinned
+      setGraphVisible(false);
     }
   }, [currentSurface, graphPinned]);
 

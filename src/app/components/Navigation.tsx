@@ -24,8 +24,15 @@ const roleHierarchy: Record<string, number> = {
 };
 
 export function Navigation({ currentView, onNavigate, userRole = "lead" }: NavigationProps) {
-  // 3-surface architecture: Library, Admin, Mission Control
+  // 3-surface architecture: Mission Control (default), Library, Admin
   const navItems = [
+    {
+      id: "mission-control",
+      label: "Mission Control",
+      icon: Radio,
+      description: "Live status",
+      minRole: "user",
+    },
     {
       id: "library",
       label: "Library",
@@ -39,13 +46,6 @@ export function Navigation({ currentView, onNavigate, userRole = "lead" }: Navig
       icon: Settings,
       description: "Operations",
       minRole: "lead",
-    },
-    {
-      id: "mission-control",
-      label: "Mission Control",
-      icon: Radio,
-      description: "Live status",
-      minRole: "user",
     },
   ];
 
