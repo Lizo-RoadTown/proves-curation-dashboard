@@ -148,9 +148,10 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedFields, setEditedFields] = useState<Record<string, string>>({});
 
-  // Epistemic verification
+  // Epistemic verification and editing
   const [verifiedEpistemics, setVerifiedEpistemics] = useState<Set<string>>(new Set());
   const [epistemicEdits, setEpistemicEdits] = useState<Record<string, string>>({});
+  const [editingEpistemicField, setEditingEpistemicField] = useState<string | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -170,6 +171,7 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
     setFieldAgreement({});
     setVerifiedEpistemics(new Set());
     setEpistemicEdits({});
+    setEditingEpistemicField(null);
     setIsEditing(false);
     setEditedFields({});
   };
@@ -497,42 +499,86 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
                       const editedValue = epistemicEdits[field.id];
                       const displayValue = editedValue ?? value;
                       const hasNoData = !displayValue;
+                      const isEditingThis = editingEpistemicField === field.id;
 
                       return (
                         <div key={field.id} className="flex items-center gap-2">
                           <span className="text-xs text-[#64748b] w-20 flex-shrink-0">{field.label}:</span>
                           <div className="flex-1 min-w-0">
-                            {hasNoData ? (
-                              <span className="text-xs text-amber-400 flex items-center gap-1">
+                            {isEditingThis ? (
+                              <input
+                                type="text"
+                                value={epistemicEdits[field.id] ?? value ?? ""}
+                                onChange={(e) => setEpistemicEdits(prev => ({
+                                  ...prev,
+                                  [field.id]: e.target.value
+                                }))}
+                                onBlur={() => setEditingEpistemicField(null)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") setEditingEpistemicField(null);
+                                  if (e.key === "Escape") {
+                                    setEpistemicEdits(prev => {
+                                      const next = { ...prev };
+                                      delete next[field.id];
+                                      return next;
+                                    });
+                                    setEditingEpistemicField(null);
+                                  }
+                                }}
+                                autoFocus
+                                className="w-full px-2 py-1 bg-[#334155] border border-[#06b6d4] rounded text-xs text-[#e2e8f0] focus:outline-none"
+                                placeholder="Enter value..."
+                              />
+                            ) : hasNoData ? (
+                              <button
+                                onClick={() => setEditingEpistemicField(field.id)}
+                                className="text-xs text-amber-400 flex items-center gap-1 hover:text-amber-300"
+                              >
                                 <AlertCircle className="h-3 w-3" />
-                                Not extracted
-                              </span>
+                                <span>Not extracted - tap to add</span>
+                              </button>
                             ) : (
-                              <span className={`text-xs truncate block ${
-                                editedValue ? "text-[#06b6d4]" : "text-[#e2e8f0]"
-                              }`}>
+                              <button
+                                onClick={() => setEditingEpistemicField(field.id)}
+                                className={`text-xs truncate block text-left w-full hover:underline ${
+                                  editedValue ? "text-[#06b6d4]" : "text-[#e2e8f0]"
+                                }`}
+                              >
                                 {displayValue}
-                              </span>
+                                {editedValue && <span className="text-[#64748b] ml-1">(edited)</span>}
+                              </button>
                             )}
                           </div>
-                          <button
-                            onClick={() => setVerifiedEpistemics(prev => {
-                              const next = new Set(prev);
-                              if (next.has(field.id)) {
-                                next.delete(field.id);
-                              } else {
-                                next.add(field.id);
-                              }
-                              return next;
-                            })}
-                            className={`p-1 rounded transition-all flex-shrink-0 ${
-                              isVerified
-                                ? "bg-green-500/30 text-green-400"
-                                : "bg-[#334155]/50 text-[#64748b]"
-                            }`}
-                          >
-                            <ThumbsUp className="h-3 w-3" />
-                          </button>
+                          {!isEditingThis && (
+                            <>
+                              <button
+                                onClick={() => setEditingEpistemicField(field.id)}
+                                className="p-1 rounded bg-[#334155]/50 text-[#64748b] hover:text-[#06b6d4] flex-shrink-0"
+                                title="Edit"
+                              >
+                                <Edit2 className="h-3 w-3" />
+                              </button>
+                              <button
+                                onClick={() => setVerifiedEpistemics(prev => {
+                                  const next = new Set(prev);
+                                  if (next.has(field.id)) {
+                                    next.delete(field.id);
+                                  } else {
+                                    next.add(field.id);
+                                  }
+                                  return next;
+                                })}
+                                className={`p-1 rounded transition-all flex-shrink-0 ${
+                                  isVerified
+                                    ? "bg-green-500/30 text-green-400"
+                                    : "bg-[#334155]/50 text-[#64748b]"
+                                }`}
+                                title="Verify"
+                              >
+                                <ThumbsUp className="h-3 w-3" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       );
                     })}
@@ -541,18 +587,89 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
               ))}
             </div>
           ) : (
-            // No epistemics from agent
-            <div className="px-3 py-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm text-amber-300">No metadata extracted by agent</p>
-                  <p className="text-xs text-[#94a3b8] mt-1">
-                    The extractor did not capture knowledge metadata for this item.
-                    Use the desktop interface to manually enter epistemic data if known.
-                  </p>
+            // No epistemics from agent - allow manual entry
+            <div className="space-y-3">
+              <div className="px-3 py-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-amber-300">No metadata extracted by agent</p>
+                    <p className="text-xs text-[#94a3b8] mt-1">
+                      Tap any field below to add what you know.
+                    </p>
+                  </div>
                 </div>
               </div>
+              {/* Show empty fields for manual entry when no epistemics */}
+              {EPISTEMIC_GROUPS.map((group) => (
+                <div key={group.id} className="border border-[#334155]/50 rounded-lg overflow-hidden">
+                  <div className="px-3 py-2 bg-[#334155]/30">
+                    <span className="text-xs font-medium text-[#94a3b8]">{group.question}</span>
+                  </div>
+                  <div className="p-2 space-y-2">
+                    {group.fields.map((field) => {
+                      const editedValue = epistemicEdits[field.id];
+                      const isEditingThis = editingEpistemicField === field.id;
+
+                      return (
+                        <div key={field.id} className="flex items-center gap-2">
+                          <span className="text-xs text-[#64748b] w-20 flex-shrink-0">{field.label}:</span>
+                          <div className="flex-1 min-w-0">
+                            {isEditingThis ? (
+                              <input
+                                type="text"
+                                value={editedValue ?? ""}
+                                onChange={(e) => setEpistemicEdits(prev => ({
+                                  ...prev,
+                                  [field.id]: e.target.value
+                                }))}
+                                onBlur={() => setEditingEpistemicField(null)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") setEditingEpistemicField(null);
+                                  if (e.key === "Escape") {
+                                    setEpistemicEdits(prev => {
+                                      const next = { ...prev };
+                                      delete next[field.id];
+                                      return next;
+                                    });
+                                    setEditingEpistemicField(null);
+                                  }
+                                }}
+                                autoFocus
+                                className="w-full px-2 py-1 bg-[#334155] border border-[#06b6d4] rounded text-xs text-[#e2e8f0] focus:outline-none"
+                                placeholder="Enter value..."
+                              />
+                            ) : editedValue ? (
+                              <button
+                                onClick={() => setEditingEpistemicField(field.id)}
+                                className="text-xs text-[#06b6d4] truncate block text-left w-full hover:underline"
+                              >
+                                {editedValue} <span className="text-[#64748b]">(added)</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => setEditingEpistemicField(field.id)}
+                                className="text-xs text-[#64748b] italic hover:text-[#94a3b8]"
+                              >
+                                Tap to add...
+                              </button>
+                            )}
+                          </div>
+                          {!isEditingThis && (
+                            <button
+                              onClick={() => setEditingEpistemicField(field.id)}
+                              className="p-1 rounded bg-[#334155]/50 text-[#64748b] hover:text-[#06b6d4] flex-shrink-0"
+                              title="Edit"
+                            >
+                              <Edit2 className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
