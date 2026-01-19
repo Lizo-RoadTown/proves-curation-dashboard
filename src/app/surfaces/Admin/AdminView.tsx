@@ -201,7 +201,6 @@ export function AdminView() {
           onNavigateToReview={() => setActiveSection("review")}
           onNavigateToSources={() => setActiveSection("sources")}
           onNavigateToIngestion={() => setActiveSection("ingestion")}
-          onNavigateToHealth={() => setActiveSection("health")}
           onNavigateToPolicy={() => setActiveSection("policy")}
           onNavigateToAgents={() => setActiveSection("agents")}
         />

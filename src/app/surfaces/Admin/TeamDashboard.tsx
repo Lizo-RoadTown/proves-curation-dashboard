@@ -42,7 +42,6 @@ interface TeamDashboardProps {
   onNavigateToReview: () => void;
   onNavigateToSources: () => void;
   onNavigateToIngestion?: () => void;
-  onNavigateToHealth?: () => void;
   onNavigateToPolicy?: () => void;
   onNavigateToAgents?: () => void;
 }
@@ -60,7 +59,6 @@ export function TeamDashboard({
   onNavigateToReview,
   onNavigateToSources,
   onNavigateToIngestion,
-  onNavigateToHealth,
   onNavigateToPolicy,
   onNavigateToAgents,
 }: TeamDashboardProps) {
@@ -429,15 +427,6 @@ export function TeamDashboard({
             >
               <p className="text-base font-medium text-slate-200">Ingestion</p>
               <p className="text-sm text-slate-500 mt-1">Crawl status & jobs</p>
-            </button>
-          )}
-          {onNavigateToHealth && (
-            <button
-              onClick={onNavigateToHealth}
-              className="p-6 bg-slate-900/50 border border-slate-700 rounded hover:bg-slate-900 hover:border-slate-600 transition-colors text-left"
-            >
-              <p className="text-base font-medium text-slate-200">Index Health</p>
-              <p className="text-sm text-slate-500 mt-1">Coverage & drift</p>
             </button>
           )}
           {onNavigateToPolicy && (
