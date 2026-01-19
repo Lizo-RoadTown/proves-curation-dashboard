@@ -14,6 +14,7 @@ import type {
   ReviewSnapshot,
   ReviewConfidence,
   ReviewLatestDecision,
+  ReviewEpistemics,
   RejectionCategory,
   RecordReviewDecisionParams,
   RecordReviewEditParams,
@@ -135,6 +136,63 @@ function parseLatestDecision(raw: Json | null): ReviewLatestDecision | null {
 }
 
 /**
+ * Parse the JSONB epistemics field (7 Knowledge Capture Questions)
+ */
+function parseEpistemics(raw: Json | null): ReviewEpistemics | null {
+  if (!raw) return null
+  const ep = raw as Record<string, unknown>
+
+  const observer = ep.observer as Record<string, unknown> | null
+  const pattern = ep.pattern as Record<string, unknown> | null
+  const dependencies = ep.dependencies as Record<string, unknown> | null
+  const conditions = ep.conditions as Record<string, unknown> | null
+  const temporal = ep.temporal as Record<string, unknown> | null
+  const authorship = ep.authorship as Record<string, unknown> | null
+  const transferability = ep.transferability as Record<string, unknown> | null
+
+  return {
+    observer: {
+      id: (observer?.id as string) || null,
+      type: (observer?.type as string) || null,
+      contact_mode: (observer?.contact_mode as string) || null,
+      contact_strength: (observer?.contact_strength as number) || null,
+    },
+    pattern: {
+      storage: (pattern?.storage as string) || null,
+      representation_media: (pattern?.representation_media as string[]) || null,
+      signal_type: (pattern?.signal_type as string) || null,
+    },
+    dependencies: {
+      entities: (dependencies?.entities as string[]) || null,
+      sequence_role: (dependencies?.sequence_role as string) || null,
+    },
+    conditions: {
+      validity_conditions: (conditions?.validity_conditions as Record<string, unknown>) || null,
+      assumptions: (conditions?.assumptions as string[]) || null,
+      scope: (conditions?.scope as string) || null,
+    },
+    temporal: {
+      observed_at: (temporal?.observed_at as string) || null,
+      valid_from: (temporal?.valid_from as string) || null,
+      valid_to: (temporal?.valid_to as string) || null,
+      refresh_trigger: (temporal?.refresh_trigger as string) || null,
+      staleness_risk: (temporal?.staleness_risk as number) || null,
+    },
+    authorship: {
+      author_id: (authorship?.author_id as string) || null,
+      intent: (authorship?.intent as string) || null,
+      uncertainty_notes: (authorship?.uncertainty_notes as string) || null,
+    },
+    transferability: {
+      reenactment_required: (transferability?.reenactment_required as boolean) || null,
+      practice_interval: (transferability?.practice_interval as string) || null,
+      skill_transferability: (transferability?.skill_transferability as string) || null,
+    },
+    domain: (ep.domain as string) || null,
+  }
+}
+
+/**
  * Transform raw view row into ReviewExtractionDTO
  */
 function transformRowToDTO(row: Record<string, unknown>): ReviewExtractionDTO {
@@ -152,6 +210,14 @@ function transformRowToDTO(row: Record<string, unknown>): ReviewExtractionDTO {
     confidence: parseConfidence(row.confidence as Json),
     latest_decision: parseLatestDecision(row.latest_decision as Json),
     edit_count: (row.edit_count as number) || 0,
+    epistemics: parseEpistemics(row.epistemics as Json),
+    provenance: {
+      source_organization: null, // TODO: Join with organizations table
+      submitted_by: null,
+      verified_by: null,
+      verified_at: null,
+      sharing_status: 'pending_review',
+    },
   }
 }
 

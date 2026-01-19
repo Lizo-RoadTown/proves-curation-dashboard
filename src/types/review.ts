@@ -229,6 +229,89 @@ export interface ReviewConfidence {
   reason: string;
 }
 
+// =============================================================================
+// EPISTEMIC METADATA (7 Knowledge Capture Questions)
+// =============================================================================
+
+/**
+ * Q1: Who knew this, and how close were they?
+ */
+export interface EpistemicObserver {
+  id: string | null;           // Who claimed to know this (designers, authors, system, unknown)
+  type: string | null;         // human | system | instrument | unknown
+  contact_mode: string | null; // direct | mediated | effect_only | derived
+  contact_strength: number | null; // 0.0-1.0 how close to reality
+}
+
+/**
+ * Q2: Where does the experience live?
+ */
+export interface EpistemicPattern {
+  storage: string | null;      // internalized | externalized | mixed | unknown
+  representation_media: string[] | null; // text, code, diagram, etc.
+  signal_type: string | null;  // text | code | spec | comment | log | telemetry
+}
+
+/**
+ * Q3: What must stay connected?
+ */
+export interface EpistemicDependencies {
+  entities: string[] | null;   // List of entity keys or extraction_ids
+  sequence_role: string | null; // precondition | step | outcome | postcondition | none
+}
+
+/**
+ * Q4: Under what conditions was this true?
+ */
+export interface EpistemicConditions {
+  validity_conditions: Record<string, unknown> | null;
+  assumptions: string[] | null;
+  scope: string | null;        // local | subsystem | system | general
+}
+
+/**
+ * Q5: When does this expire?
+ */
+export interface EpistemicTemporal {
+  observed_at: string | null;
+  valid_from: string | null;
+  valid_to: string | null;
+  refresh_trigger: string | null; // new_rev, recalibration, etc.
+  staleness_risk: number | null;  // 0.0-1.0
+}
+
+/**
+ * Q6: Who wrote this, and why?
+ */
+export interface EpistemicAuthorship {
+  author_id: string | null;
+  intent: string | null;       // explain | instruct | justify | explore | comply | persuade
+  uncertainty_notes: string | null;
+}
+
+/**
+ * Q7: Does this only work if someone keeps doing it?
+ */
+export interface EpistemicTransferability {
+  reenactment_required: boolean | null;
+  practice_interval: string | null; // per-run, weekly, etc.
+  skill_transferability: string | null; // portable | conditional | local | tacit_like
+}
+
+/**
+ * Full epistemic metadata from knowledge_epistemics sidecar
+ */
+export interface ReviewEpistemics {
+  observer: EpistemicObserver;
+  pattern: EpistemicPattern;
+  dependencies: EpistemicDependencies;
+  conditions: EpistemicConditions;
+  temporal: EpistemicTemporal;
+  authorship: EpistemicAuthorship;
+  transferability: EpistemicTransferability;
+  domain: string | null;
+}
+
 /**
  * Latest decision if already reviewed
  */
@@ -280,6 +363,9 @@ export interface ReviewExtractionDTO {
 
   // Provenance - who contributed this
   provenance: ExtractionProvenance;
+
+  // Epistemic metadata (7 Knowledge Capture Questions) - from agents for engineer review
+  epistemics: ReviewEpistemics | null;
 }
 
 // =============================================================================

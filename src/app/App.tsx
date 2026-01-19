@@ -21,10 +21,12 @@ import { Loader2 } from "lucide-react";
 
 // 3-surface architecture: Library, Admin, Mission Control
 import { LibraryView, AdminView, MissionControlView } from "./surfaces";
+import { MobileReview } from "./components/MobileReview";
 
 // Surface types
 type Surface = "library" | "admin" | "mission-control";
 type AuthView = "login" | "signup";
+type AppMode = "dashboard" | "mobile-review";
 
 // DEV MODE: Skip auth for local development
 // Set to false to test real auth flow even in dev
@@ -44,6 +46,7 @@ export default function App() {
   const [currentSurface, setCurrentSurface] = useState<Surface>("mission-control");
   const [authView, setAuthView] = useState<AuthView>("login");
   const [showOrgPicker, setShowOrgPicker] = useState(false);
+  const [appMode, setAppMode] = useState<AppMode>("dashboard");
 
   // Check if user needs to pick their organization (first login)
   useEffect(() => {
@@ -99,7 +102,22 @@ export default function App() {
     if (authView === "signup") {
       return <SignupPage onSwitchToLogin={() => setAuthView("login")} />;
     }
-    return <LoginPage onSwitchToSignup={() => setAuthView("signup")} />;
+    return (
+      <LoginPage
+        onSwitchToSignup={() => setAuthView("signup")}
+        onMobileReviewMode={() => setAppMode("mobile-review")}
+      />
+    );
+  }
+
+  // Mobile Review Mode - full screen, optimized for phones
+  if (appMode === "mobile-review") {
+    return (
+      <MobileReview
+        onExit={() => setAppMode("dashboard")}
+        organizationId={currentOrg?.org_id}
+      />
+    );
   }
 
   // Show organization picker for first login
