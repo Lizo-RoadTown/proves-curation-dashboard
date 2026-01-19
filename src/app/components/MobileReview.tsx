@@ -2,15 +2,16 @@
  * MobileReview - Mobile-optimized engineer knowledge review
  *
  * PURPOSE: Quick, thumb-friendly review on mobile devices
- * - Show coupling info: FROM, TO, WHAT FLOWS
+ * - Show coupling info: FROM, TO, VIA, WHAT FLOWS (matches desktop)
  * - Tap to agree/disagree with each field
  * - Edit mode to correct information
- * - Large touch targets for accuracy checks
+ * - Epistemic metadata verification (7 questions)
+ * - Clear "No data extracted" messages with instructions
  *
  * Entry point: Sign-in choice "Mobile Review App"
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/app/components/ui/button";
 import { Badge } from "@/app/components/ui/badge";
 import {
@@ -27,47 +28,118 @@ import {
   Save,
   X,
   ArrowRight,
+  AlertCircle,
 } from "lucide-react";
 import { useReviewExtractions } from "@/hooks/useReviewExtractions";
-import type { ReviewExtractionDTO, ReviewEpistemics } from "@/types/review";
+import type { ReviewEpistemics } from "@/types/review";
 
 interface MobileReviewProps {
   onExit: () => void;
   organizationId?: string;
 }
 
-// Helper to extract coupling fields from candidate_payload
+// Helper to extract coupling fields from candidate_payload (matches desktop)
 function extractCouplingFields(payload: Record<string, unknown>) {
+  // Handle nested flow object
+  const flowObj = payload.flow as Record<string, unknown> | string | undefined;
+  const flowValue = typeof flowObj === 'object' && flowObj !== null
+    ? (flowObj.what as string || "")
+    : (flowObj || payload.what_flows || payload.flow_type || "") as string;
+
   return {
-    source: (payload.source || payload.from || payload.source_component || payload.from_component || "") as string,
-    target: (payload.target || payload.to || payload.target_component || payload.to_component || "") as string,
-    flowType: (payload.flow_type || payload.what_flows || payload.flow || payload.coupling_type || "") as string,
+    from_component: (payload.from_component || payload.source || payload.from || payload.source_component || "") as string,
+    to_component: (payload.to_component || payload.target || payload.to || payload.target_component || "") as string,
+    via_interface: (payload.via_interface || payload.via || payload.interface || "") as string,
+    flow: flowValue,
+    name: (payload.name || "") as string,
     description: (payload.description || payload.summary || "") as string,
-    couplingStrength: (payload.coupling_strength || payload.strength || "") as string,
   };
 }
 
-// Core coupling fields for FRAMES review
+// Core coupling fields for FRAMES review (matches desktop EngineerReview)
 const COUPLING_FIELDS = [
-  { id: "source", label: "FROM", placeholder: "Source component", icon: "→" },
-  { id: "target", label: "TO", placeholder: "Target component", icon: "←" },
-  { id: "flowType", label: "WHAT FLOWS", placeholder: "Data, power, commands...", icon: "⟷" },
-  { id: "description", label: "DESCRIPTION", placeholder: "What this coupling does", icon: "📝" },
+  { id: "from_component", label: "FROM COMPONENT", placeholder: "Enter source component if known..." },
+  { id: "to_component", label: "TO COMPONENT", placeholder: "Enter target component if known..." },
+  { id: "via_interface", label: "VIA INTERFACE", placeholder: "Enter interface if known..." },
+  { id: "flow", label: "WHAT FLOWS", placeholder: "What data/signals flow through this?" },
 ];
 
-// Simplified epistemic fields for mobile
-const MOBILE_EPISTEMIC_CHECKS = [
-  { id: "observer", label: "Who knew?", getVal: (ep: ReviewEpistemics) => ep.observer?.type || ep.observer?.contact_mode },
-  { id: "storage", label: "Where stored?", getVal: (ep: ReviewEpistemics) => ep.pattern?.storage },
-  { id: "dependencies", label: "Connected to?", getVal: (ep: ReviewEpistemics) => ep.dependencies?.entities?.slice(0, 2).join(", ") },
-  { id: "scope", label: "Scope", getVal: (ep: ReviewEpistemics) => ep.conditions?.scope },
-  { id: "staleness", label: "Current?", getVal: (ep: ReviewEpistemics) => ep.temporal?.staleness_risk != null ? `${Math.round((1 - (ep.temporal.staleness_risk || 0)) * 100)}% fresh` : null },
-  { id: "transferable", label: "Learnable?", getVal: (ep: ReviewEpistemics) => ep.transferability?.skill_transferability },
+// Entity fields for non-coupling extractions
+const ENTITY_FIELDS = [
+  { id: "name", label: "NAME", placeholder: "Enter correct name if different..." },
+  { id: "description", label: "DESCRIPTION", placeholder: "Add or correct description..." },
+];
+
+// Epistemic metadata fields (simplified 7 questions - matches desktop)
+const EPISTEMIC_GROUPS = [
+  {
+    id: "observer",
+    question: "Q1: Who knew this?",
+    fields: [
+      { id: "observer_type", label: "Source Type", getValue: (ep: ReviewEpistemics) => ep.observer?.type },
+      { id: "contact_mode", label: "Contact Mode", getValue: (ep: ReviewEpistemics) => ep.observer?.contact_mode },
+    ],
+  },
+  {
+    id: "storage",
+    question: "Q2: Where does this live?",
+    fields: [
+      { id: "pattern_storage", label: "Storage", getValue: (ep: ReviewEpistemics) => ep.pattern?.storage },
+      { id: "signal_type", label: "Signal Type", getValue: (ep: ReviewEpistemics) => ep.pattern?.signal_type },
+    ],
+  },
+  {
+    id: "dependencies",
+    question: "Q3: What stays connected?",
+    fields: [
+      { id: "dependencies", label: "Dependencies", getValue: (ep: ReviewEpistemics) => ep.dependencies?.entities?.join(", ") || null },
+      { id: "sequence_role", label: "Role", getValue: (ep: ReviewEpistemics) => ep.dependencies?.sequence_role },
+    ],
+  },
+  {
+    id: "conditions",
+    question: "Q4: When is this true?",
+    fields: [
+      { id: "assumptions", label: "Assumptions", getValue: (ep: ReviewEpistemics) => ep.conditions?.assumptions?.join(", ") || null },
+      { id: "scope", label: "Scope", getValue: (ep: ReviewEpistemics) => ep.conditions?.scope },
+    ],
+  },
+  {
+    id: "validity",
+    question: "Q5: How current is this?",
+    fields: [
+      { id: "staleness_risk", label: "Staleness", getValue: (ep: ReviewEpistemics) => ep.temporal?.staleness_risk != null ? `${Math.round((ep.temporal.staleness_risk || 0) * 100)}% risk` : null },
+      { id: "refresh_trigger", label: "Refresh When", getValue: (ep: ReviewEpistemics) => ep.temporal?.refresh_trigger },
+    ],
+  },
+  {
+    id: "authorship",
+    question: "Q6: Who wrote this?",
+    fields: [
+      { id: "intent", label: "Intent", getValue: (ep: ReviewEpistemics) => ep.authorship?.intent },
+      { id: "uncertainty_notes", label: "Uncertainties", getValue: (ep: ReviewEpistemics) => ep.authorship?.uncertainty_notes },
+    ],
+  },
+  {
+    id: "practice",
+    question: "Q7: Need to DO it?",
+    fields: [
+      { id: "reenactment_required", label: "Needs Practice", getValue: (ep: ReviewEpistemics) => ep.transferability?.reenactment_required != null ? (ep.transferability.reenactment_required ? "Yes" : "No") : null },
+      { id: "skill_transferability", label: "Transferability", getValue: (ep: ReviewEpistemics) => ep.transferability?.skill_transferability },
+    ],
+  },
 ];
 
 export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
-  const { extractions, loading, error, submitDecision, refetch } = useReviewExtractions(organizationId);
+  const { extractions, loading, error, recordDecision, refresh, fetchExtractions } = useReviewExtractions();
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Fetch with organization filter on mount
+  useEffect(() => {
+    if (organizationId) {
+      fetchExtractions({ organizationId, status: 'pending' });
+    }
+  }, [organizationId, fetchExtractions]);
 
   // Field-level agreement tracking (thumbs up/down per field)
   const [fieldAgreement, setFieldAgreement] = useState<Record<string, boolean | null>>({});
@@ -76,30 +148,35 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedFields, setEditedFields] = useState<Record<string, string>>({});
 
+  // Epistemic verification
   const [verifiedEpistemics, setVerifiedEpistemics] = useState<Set<string>>(new Set());
+  const [epistemicEdits, setEpistemicEdits] = useState<Record<string, string>>({});
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const current = extractions[currentIndex];
   const total = extractions.length;
 
-  // Extract coupling fields from current extraction
-  const couplingFields = current ? extractCouplingFields(current.candidate_payload) : null;
+  // Extract fields from current extraction
+  const extractedFields = current ? extractCouplingFields(current.candidate_payload) : null;
+
+  // Determine if this is a coupling (has from AND to) or an entity
+  const isCoupling = extractedFields && (extractedFields.from_component || extractedFields.to_component);
+
+  // Get the appropriate fields based on type
+  const fieldsToShow = isCoupling ? COUPLING_FIELDS : ENTITY_FIELDS;
 
   const resetChecks = () => {
     setFieldAgreement({});
     setVerifiedEpistemics(new Set());
+    setEpistemicEdits({});
     setIsEditing(false);
     setEditedFields({});
   };
 
   const startEditing = () => {
-    if (couplingFields) {
-      setEditedFields({
-        source: couplingFields.source,
-        target: couplingFields.target,
-        flowType: couplingFields.flowType,
-        description: couplingFields.description,
-      });
+    if (extractedFields) {
+      setEditedFields({ ...extractedFields });
       setIsEditing(true);
     }
   };
@@ -127,19 +204,23 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
     if (!current) return;
     setIsSubmitting(true);
     try {
-      const hasEdits = Object.keys(editedFields).length > 0;
+      const hasEdits = Object.values(editedFields).some(v => v);
+      const hasEpistemicEdits = Object.keys(epistemicEdits).length > 0;
       const agreedFields = Object.entries(fieldAgreement)
         .filter(([_, v]) => v === true)
         .map(([k]) => k);
-      const disagreedFields = Object.entries(fieldAgreement)
-        .filter(([_, v]) => v === false)
-        .map(([k]) => k);
 
-      await submitDecision(current.extraction_id, "accept", {
-        decision_reason: hasEdits
-          ? `Mobile review - approved with edits to: ${Object.keys(editedFields).join(", ")}`
-          : `Mobile review - approved. Agreed: ${agreedFields.join(", ") || "all"}`,
-        // TODO: Pass edited payload when backend supports it
+      // Get current user ID from supabase
+      const { data: { user } } = await import("@/lib/supabase").then(m => m.supabase.auth.getUser());
+      if (!user) throw new Error("Not authenticated");
+
+      await recordDecision({
+        p_extraction_id: current.extraction_id,
+        p_decision: "accept",
+        p_reviewer_id: user.id,
+        p_decision_reason: hasEdits || hasEpistemicEdits
+          ? `Mobile review - approved with corrections`
+          : `Mobile review - approved. Verified: ${agreedFields.join(", ") || "reviewed"}`,
       });
       goNext();
     } finally {
@@ -155,11 +236,18 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
         .filter(([_, v]) => v === false)
         .map(([k]) => k);
 
-      await submitDecision(current.extraction_id, "reject", {
-        decision_reason: disagreedFields.length > 0
-          ? `${reason}. Disagreed with: ${disagreedFields.join(", ")}`
+      // Get current user ID from supabase
+      const { data: { user } } = await import("@/lib/supabase").then(m => m.supabase.auth.getUser());
+      if (!user) throw new Error("Not authenticated");
+
+      await recordDecision({
+        p_extraction_id: current.extraction_id,
+        p_decision: "reject",
+        p_reviewer_id: user.id,
+        p_decision_reason: disagreedFields.length > 0
+          ? `${reason}. Issues with: ${disagreedFields.join(", ")}`
           : reason,
-        rejection_category: "other",
+        p_rejection_category: "other",
       });
       goNext();
     } finally {
@@ -167,11 +255,9 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
     }
   };
 
-  // Check if user has reviewed the key coupling fields
-  const coreFieldIds = ["source", "target", "flowType"];
-  const hasReviewedCoreFields = coreFieldIds.some(id => fieldAgreement[id] !== undefined);
+  // Check review progress
   const anyFieldDisagreed = Object.values(fieldAgreement).some(v => v === false);
-  const allCoreFieldsAgreed = coreFieldIds.every(id => fieldAgreement[id] === true);
+  const hasReviewedSomeFields = Object.keys(fieldAgreement).length > 0;
 
   if (loading) {
     return (
@@ -188,7 +274,7 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
     return (
       <div className="min-h-screen bg-[#0f172a] flex flex-col items-center justify-center p-4 gap-4">
         <p className="text-red-400">{error}</p>
-        <Button onClick={() => refetch()} variant="outline" className="border-[#334155] text-[#cbd5e1]">
+        <Button onClick={() => refresh()} variant="outline" className="border-[#334155] text-[#cbd5e1]">
           Retry
         </Button>
       </div>
@@ -224,7 +310,7 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
   }
 
   const { candidate_key, candidate_type, evidence, snapshot, epistemics } = current;
-  const coupling = couplingFields!;
+  const fields = extractedFields!;
 
   return (
     <div className="min-h-screen bg-[#0f172a] flex flex-col">
@@ -258,34 +344,36 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
           <p className="text-sm text-[#64748b] mt-1">{candidate_type}</p>
         </div>
 
-        {/* COUPLING FIELDS - The Core FRAMES Info */}
+        {/* EXTRACTION FIELDS - Coupling or Entity */}
         <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs text-[#64748b] uppercase tracking-wider">Coupling Details</span>
+            <span className="text-xs text-[#64748b] uppercase tracking-wider">
+              {isCoupling ? "Coupling Details" : "Entity Details"}
+            </span>
             {!isEditing && (
-              <span className="text-xs text-[#64748b]">Tap 👍/👎 to agree or disagree</span>
+              <span className="text-xs text-[#64748b]">👍 agree · 👎 disagree</span>
             )}
           </div>
 
-          {/* FROM → TO visual */}
-          {!isEditing && (coupling.source || coupling.target) && (
+          {/* FROM → TO visual (for couplings) */}
+          {!isEditing && isCoupling && (fields.from_component || fields.to_component) && (
             <div className="flex items-center justify-center gap-2 mb-4 py-3 bg-[#334155]/30 rounded-lg">
               <span className="text-[#e2e8f0] font-medium text-sm truncate max-w-[40%]">
-                {coupling.source || "?"}
+                {fields.from_component || "?"}
               </span>
               <ArrowRight className="h-4 w-4 text-[#06b6d4] flex-shrink-0" />
               <span className="text-[#e2e8f0] font-medium text-sm truncate max-w-[40%]">
-                {coupling.target || "?"}
+                {fields.to_component || "?"}
               </span>
             </div>
           )}
 
           <div className="space-y-3">
-            {COUPLING_FIELDS.map((field) => {
-              const value = isEditing
-                ? editedFields[field.id] || ""
-                : coupling[field.id as keyof typeof coupling] || "";
+            {fieldsToShow.map((field) => {
+              const extractedValue = fields[field.id as keyof typeof fields] || "";
+              const editValue = isEditing ? (editedFields[field.id] || "") : extractedValue;
               const agreement = fieldAgreement[field.id];
+              const hasNoData = !extractedValue;
 
               return (
                 <div key={field.id} className="space-y-1">
@@ -324,10 +412,11 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
                       </div>
                     )}
                   </div>
+
                   {isEditing ? (
                     <input
                       type="text"
-                      value={editedFields[field.id] || ""}
+                      value={editValue}
                       onChange={(e) => setEditedFields(prev => ({
                         ...prev,
                         [field.id]: e.target.value
@@ -335,13 +424,26 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
                       placeholder={field.placeholder}
                       className="w-full px-3 py-2 bg-[#334155] border border-[#475569] rounded-lg text-[#e2e8f0] text-sm placeholder:text-[#64748b] focus:outline-none focus:ring-2 focus:ring-[#06b6d4]/50"
                     />
+                  ) : hasNoData ? (
+                    // NO DATA EXTRACTED - explicit message
+                    <div className={`px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 ${
+                      agreement === false ? "ring-1 ring-red-500/50" : ""
+                    } ${agreement === true ? "ring-1 ring-green-500/50" : ""}`}>
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-amber-300">No data extracted</p>
+                          <p className="text-xs text-[#94a3b8] mt-0.5">
+                            Tap <Edit2 className="h-3 w-3 inline" /> to enter if known
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   ) : (
-                    <p className={`text-sm px-3 py-2 rounded-lg ${
-                      value
-                        ? "text-[#e2e8f0] bg-[#334155]/30"
-                        : "text-[#64748b] italic bg-[#334155]/20"
-                    } ${agreement === false ? "ring-1 ring-red-500/50" : ""} ${agreement === true ? "ring-1 ring-green-500/50" : ""}`}>
-                      {value || `No ${field.label.toLowerCase()} specified`}
+                    <p className={`text-sm px-3 py-2 rounded-lg text-[#e2e8f0] bg-[#334155]/30 ${
+                      agreement === false ? "ring-1 ring-red-500/50" : ""
+                    } ${agreement === true ? "ring-1 ring-green-500/50" : ""}`}>
+                      {extractedValue}
                     </p>
                   )}
                 </div>
@@ -370,43 +472,90 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
           </p>
         </div>
 
-        {/* Epistemic Quick Checks (if available) */}
-        {epistemics && (
-          <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-4">
-            <span className="text-xs text-[#64748b] uppercase tracking-wider block mb-3">Knowledge Metadata</span>
-            <div className="grid grid-cols-2 gap-2">
-              {MOBILE_EPISTEMIC_CHECKS.map((field) => {
-                const value = field.getVal(epistemics);
-                const isVerified = verifiedEpistemics.has(field.id);
-                return (
-                  <button
-                    key={field.id}
-                    onClick={() => setVerifiedEpistemics(prev => {
-                      const next = new Set(prev);
-                      if (next.has(field.id)) {
-                        next.delete(field.id);
-                      } else {
-                        next.add(field.id);
-                      }
-                      return next;
-                    })}
-                    className={`p-3 rounded-lg text-left transition-all ${
-                      isVerified
-                        ? "bg-green-500/20 border border-green-500/50"
-                        : "bg-[#334155]/50 border border-[#334155]"
-                    }`}
-                  >
-                    <p className="text-xs text-[#64748b]">{field.label}</p>
-                    <p className={`text-sm truncate ${value ? "text-[#e2e8f0]" : "text-[#64748b] italic"}`}>
-                      {value || "Not detected"}
-                    </p>
-                    {isVerified && <CheckCircle className="h-3 w-3 text-green-400 mt-1" />}
-                  </button>
-                );
-              })}
-            </div>
+        {/* EPISTEMIC METADATA - The 7 Questions */}
+        <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs text-[#64748b] uppercase tracking-wider">Knowledge Metadata</span>
+            {epistemics && (
+              <Badge variant="outline" className="text-xs bg-green-500/20 text-green-400 border-green-500/30">
+                {verifiedEpistemics.size}/{EPISTEMIC_GROUPS.flatMap(g => g.fields).length} verified
+              </Badge>
+            )}
           </div>
-        )}
+
+          {epistemics ? (
+            <div className="space-y-3">
+              {EPISTEMIC_GROUPS.map((group) => (
+                <div key={group.id} className="border border-[#334155]/50 rounded-lg overflow-hidden">
+                  <div className="px-3 py-2 bg-[#334155]/30">
+                    <span className="text-xs font-medium text-[#94a3b8]">{group.question}</span>
+                  </div>
+                  <div className="p-2 space-y-2">
+                    {group.fields.map((field) => {
+                      const value = field.getValue(epistemics);
+                      const isVerified = verifiedEpistemics.has(field.id);
+                      const editedValue = epistemicEdits[field.id];
+                      const displayValue = editedValue ?? value;
+                      const hasNoData = !displayValue;
+
+                      return (
+                        <div key={field.id} className="flex items-center gap-2">
+                          <span className="text-xs text-[#64748b] w-20 flex-shrink-0">{field.label}:</span>
+                          <div className="flex-1 min-w-0">
+                            {hasNoData ? (
+                              <span className="text-xs text-amber-400 flex items-center gap-1">
+                                <AlertCircle className="h-3 w-3" />
+                                Not extracted
+                              </span>
+                            ) : (
+                              <span className={`text-xs truncate block ${
+                                editedValue ? "text-[#06b6d4]" : "text-[#e2e8f0]"
+                              }`}>
+                                {displayValue}
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => setVerifiedEpistemics(prev => {
+                              const next = new Set(prev);
+                              if (next.has(field.id)) {
+                                next.delete(field.id);
+                              } else {
+                                next.add(field.id);
+                              }
+                              return next;
+                            })}
+                            className={`p-1 rounded transition-all flex-shrink-0 ${
+                              isVerified
+                                ? "bg-green-500/30 text-green-400"
+                                : "bg-[#334155]/50 text-[#64748b]"
+                            }`}
+                          >
+                            <ThumbsUp className="h-3 w-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            // No epistemics from agent
+            <div className="px-3 py-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm text-amber-300">No metadata extracted by agent</p>
+                  <p className="text-xs text-[#94a3b8] mt-1">
+                    The extractor did not capture knowledge metadata for this item.
+                    Use the desktop interface to manually enter epistemic data if known.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Navigation & Actions */}
@@ -461,10 +610,10 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
               )}
             </Button>
           </div>
-        ) : !hasReviewedCoreFields ? (
+        ) : !hasReviewedSomeFields ? (
           <div className="space-y-2">
             <p className="text-center text-sm text-[#64748b]">
-              Review the coupling fields above (👍 or 👎)
+              Review the fields above (👍 or 👎) or tap <Edit2 className="h-3 w-3 inline" /> to correct
             </p>
             <Button
               onClick={goNext}
