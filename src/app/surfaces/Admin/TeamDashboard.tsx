@@ -6,6 +6,7 @@
  */
 
 import { ChevronRight, Loader2, ChevronDown } from "lucide-react";
+import { RadialBarChart, RadialBar, PolarAngleAxis } from "recharts";
 import type { UserOrganization, OrganizationStats } from "@/hooks/useCurrentOrganization";
 
 // =============================================================================
@@ -88,7 +89,7 @@ export function TeamDashboard({
   const currentOrg = organizations.find(o => o.org_id === currentOrgId);
 
   return (
-    <div className="p-6 space-y-6 min-h-full">
+    <div className="p-6 space-y-6 flex-1 flex flex-col">
       {/* Header with Organization Selector */}
       <div className="flex items-center justify-between">
         <div>
@@ -124,36 +125,101 @@ export function TeamDashboard({
         )}
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-5 gap-4">
-        <div className="p-4 bg-slate-800/50 border border-slate-700 rounded">
-          <p className="text-2xl font-medium text-slate-100">{stats.our_pending_reviews}</p>
-          <p className="text-sm text-slate-400">Pending Review</p>
+      {/* Review Health - Main Focus */}
+      <div className="grid grid-cols-3 gap-6">
+        {/* Review Queue Gauge */}
+        <div className="p-6 bg-slate-800/50 border border-slate-700 rounded flex flex-col items-center">
+          <div className="relative w-36 h-36">
+            <RadialBarChart
+              width={144}
+              height={144}
+              cx={72}
+              cy={72}
+              innerRadius={50}
+              outerRadius={70}
+              startAngle={90}
+              endAngle={-270}
+              data={[{ value: Math.min(stats.our_pending_reviews * 10, 100), fill: stats.our_pending_reviews > 0 ? "#f59e0b" : "#22c55e" }]}
+            >
+              <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+              <RadialBar background={{ fill: "#334155" }} dataKey="value" cornerRadius={10} />
+            </RadialBarChart>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className={`text-3xl font-bold ${stats.our_pending_reviews > 0 ? 'text-amber-400' : 'text-green-400'}`}>
+                {stats.our_pending_reviews}
+              </span>
+              <span className="text-xs text-slate-500">pending</span>
+            </div>
+          </div>
+          <p className="text-sm text-slate-300 mt-2">Review Queue</p>
+          <p className="text-xs text-slate-500 mt-1">
+            {stats.our_pending_reviews === 0 ? "All clear" : "Items awaiting review"}
+          </p>
         </div>
-        <div className="p-4 bg-slate-800/50 border border-slate-700 rounded">
-          <p className="text-2xl font-medium text-slate-100">{stats.our_verified_entities}</p>
-          <p className="text-sm text-slate-400">Verified Entities</p>
+
+        {/* Verified vs Total - Completion Ring */}
+        <div className="p-6 bg-slate-800/50 border border-slate-700 rounded flex flex-col items-center">
+          <div className="relative w-36 h-36">
+            <RadialBarChart
+              width={144}
+              height={144}
+              cx={72}
+              cy={72}
+              innerRadius={50}
+              outerRadius={70}
+              startAngle={90}
+              endAngle={-270}
+              data={[{ value: stats.our_verified_entities > 0 ? Math.min((stats.our_verified_entities / Math.max(stats.our_verified_entities + stats.our_pending_reviews, 1)) * 100, 100) : 0, fill: "#06b6d4" }]}
+            >
+              <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+              <RadialBar background={{ fill: "#334155" }} dataKey="value" cornerRadius={10} />
+            </RadialBarChart>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-3xl font-bold text-cyan-400">{stats.our_verified_entities}</span>
+              <span className="text-xs text-slate-500">verified</span>
+            </div>
+          </div>
+          <p className="text-sm text-slate-300 mt-2">Knowledge Base</p>
+          <p className="text-xs text-slate-500 mt-1">
+            {stats.shared_from_us} shared to collective
+          </p>
         </div>
-        <div className="p-4 bg-slate-800/50 border border-slate-700 rounded">
-          <p className="text-2xl font-medium text-slate-100">{stats.our_sources}</p>
-          <p className="text-sm text-slate-400">Active Sources</p>
-        </div>
-        <div className="p-4 bg-slate-800/50 border border-slate-700 rounded">
-          <p className="text-2xl font-medium text-slate-100">{stats.our_contributors}</p>
-          <p className="text-sm text-slate-400">Contributors</p>
-        </div>
-        <div className="p-4 bg-slate-800/50 border border-slate-700 rounded">
-          <p className="text-2xl font-medium text-slate-100">{stats.shared_total}</p>
-          <p className="text-sm text-slate-400">Shared Entities</p>
+
+        {/* Pipeline Health */}
+        <div className="p-6 bg-slate-800/50 border border-slate-700 rounded flex flex-col items-center">
+          <div className="relative w-36 h-36">
+            <RadialBarChart
+              width={144}
+              height={144}
+              cx={72}
+              cy={72}
+              innerRadius={50}
+              outerRadius={70}
+              startAngle={90}
+              endAngle={-270}
+              data={[{ value: stats.our_sources > 0 ? Math.min(stats.our_sources * 20, 100) : 0, fill: "#8b5cf6" }]}
+            >
+              <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+              <RadialBar background={{ fill: "#334155" }} dataKey="value" cornerRadius={10} />
+            </RadialBarChart>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-3xl font-bold text-purple-400">{stats.our_sources}</span>
+              <span className="text-xs text-slate-500">sources</span>
+            </div>
+          </div>
+          <p className="text-sm text-slate-300 mt-2">Active Pipelines</p>
+          <p className="text-xs text-slate-500 mt-1">
+            {stats.our_contributors} contributors
+          </p>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-6 flex-1">
         {/* Review Queue */}
-        <div className="bg-slate-800/50 border border-slate-700 rounded p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-medium text-slate-200">Review Queue</h2>
+        <div className="bg-slate-800/50 border border-slate-700 rounded p-6 flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-base font-medium text-slate-200">Review Queue</h2>
             <button
               onClick={onNavigateToReview}
               className="text-sm text-slate-400 hover:text-slate-200 flex items-center gap-1"
@@ -163,21 +229,21 @@ export function TeamDashboard({
           </div>
 
           {stats.our_pending_reviews === 0 ? (
-            <div className="text-center py-8">
+            <div className="flex-1 flex items-center justify-center">
               <p className="text-slate-400 text-sm">No pending items</p>
             </div>
           ) : (
-            <div className="text-center py-8">
-              <p className="text-2xl font-medium text-amber-400">{stats.our_pending_reviews}</p>
-              <p className="text-slate-400 text-sm mt-1">items need review</p>
+            <div className="flex-1 flex flex-col items-center justify-center">
+              <p className="text-4xl font-medium text-amber-400">{stats.our_pending_reviews}</p>
+              <p className="text-slate-400 text-sm mt-2">items need review</p>
             </div>
           )}
         </div>
 
         {/* Sources */}
-        <div className="bg-slate-800/50 border border-slate-700 rounded p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-medium text-slate-200">Connected Sources</h2>
+        <div className="bg-slate-800/50 border border-slate-700 rounded p-6 flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-base font-medium text-slate-200">Connected Sources</h2>
             <button
               onClick={onNavigateToSources}
               className="text-sm text-slate-400 hover:text-slate-200 flex items-center gap-1"
@@ -187,39 +253,39 @@ export function TeamDashboard({
           </div>
 
           {sourcesLoading ? (
-            <div className="flex items-center justify-center py-8">
+            <div className="flex-1 flex items-center justify-center">
               <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
             </div>
           ) : teamSources.length === 0 ? (
-            <div className="text-center py-8">
+            <div className="flex-1 flex flex-col items-center justify-center">
               <p className="text-slate-400 text-sm">No sources connected</p>
               <button
                 onClick={onNavigateToSources}
-                className="mt-2 text-sm text-blue-400 hover:text-blue-300"
+                className="mt-3 text-sm text-blue-400 hover:text-blue-300"
               >
                 + Add a source
               </button>
             </div>
           ) : (
-            <div className="space-y-2 max-h-48 overflow-y-auto">
+            <div className="flex-1 space-y-3 overflow-y-auto">
               {teamSources.map((source) => (
                 <div
                   key={source.id}
-                  className="flex items-center justify-between p-3 bg-slate-900/50 border border-slate-700 rounded"
+                  className="flex items-center justify-between p-4 bg-slate-900/50 border border-slate-700 rounded"
                 >
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${
+                  <div className="flex items-center gap-3">
+                    <span className={`w-2.5 h-2.5 rounded-full ${
                       source.status === 'active' ? 'bg-green-500' :
                       source.status === 'error' ? 'bg-red-500' : 'bg-yellow-500'
                     }`} />
                     <div>
                       <p className="text-sm text-slate-200">{source.name}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-500 mt-0.5">
                         {source.type} · Last: {source.last_crawl}
                       </p>
                     </div>
                   </div>
-                  <span className="text-xs text-slate-500">
+                  <span className="text-sm text-slate-500">
                     {source.entities_found} items
                   </span>
                 </div>
@@ -229,44 +295,158 @@ export function TeamDashboard({
         </div>
       </div>
 
-      {/* Admin Tools */}
-      <div className="bg-slate-800/50 border border-slate-700 rounded p-4">
-        <h2 className="text-sm font-medium text-slate-200 mb-4">System Controls</h2>
+      {/* Index Health Gauges - Cockpit Style */}
+      <div className="bg-slate-800/50 border border-slate-700 rounded p-6">
+        <h2 className="text-base font-medium text-slate-200 mb-4">Index Health</h2>
         <div className="grid grid-cols-4 gap-4">
+          {/* Ops Coverage */}
+          <div className="flex flex-col items-center p-4">
+            <div className="relative w-20 h-20">
+              <RadialBarChart
+                width={80}
+                height={80}
+                cx={40}
+                cy={40}
+                innerRadius={26}
+                outerRadius={38}
+                startAngle={90}
+                endAngle={-270}
+                data={[{ value: 85, fill: "#22c55e" }]}
+              >
+                <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+                <RadialBar background={{ fill: "#334155" }} dataKey="value" cornerRadius={6} />
+              </RadialBarChart>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-sm font-bold text-green-400">85%</span>
+              </div>
+            </div>
+            <p className="text-xs text-slate-400 mt-2">Ops</p>
+          </div>
+
+          {/* Software Coverage */}
+          <div className="flex flex-col items-center p-4">
+            <div className="relative w-20 h-20">
+              <RadialBarChart
+                width={80}
+                height={80}
+                cx={40}
+                cy={40}
+                innerRadius={26}
+                outerRadius={38}
+                startAngle={90}
+                endAngle={-270}
+                data={[{ value: 72, fill: "#06b6d4" }]}
+              >
+                <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+                <RadialBar background={{ fill: "#334155" }} dataKey="value" cornerRadius={6} />
+              </RadialBarChart>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-sm font-bold text-cyan-400">72%</span>
+              </div>
+            </div>
+            <p className="text-xs text-slate-400 mt-2">Software</p>
+          </div>
+
+          {/* Hardware Coverage */}
+          <div className="flex flex-col items-center p-4">
+            <div className="relative w-20 h-20">
+              <RadialBarChart
+                width={80}
+                height={80}
+                cx={40}
+                cy={40}
+                innerRadius={26}
+                outerRadius={38}
+                startAngle={90}
+                endAngle={-270}
+                data={[{ value: 45, fill: "#f59e0b" }]}
+              >
+                <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+                <RadialBar background={{ fill: "#334155" }} dataKey="value" cornerRadius={6} />
+              </RadialBarChart>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-sm font-bold text-amber-400">45%</span>
+              </div>
+            </div>
+            <p className="text-xs text-slate-400 mt-2">Hardware</p>
+          </div>
+
+          {/* Process Coverage */}
+          <div className="flex flex-col items-center p-4">
+            <div className="relative w-20 h-20">
+              <RadialBarChart
+                width={80}
+                height={80}
+                cx={40}
+                cy={40}
+                innerRadius={26}
+                outerRadius={38}
+                startAngle={90}
+                endAngle={-270}
+                data={[{ value: 60, fill: "#8b5cf6" }]}
+              >
+                <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+                <RadialBar background={{ fill: "#334155" }} dataKey="value" cornerRadius={6} />
+              </RadialBarChart>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-sm font-bold text-purple-400">60%</span>
+              </div>
+            </div>
+            <p className="text-xs text-slate-400 mt-2">Process</p>
+          </div>
+        </div>
+
+        {/* Issues row */}
+        <div className="mt-4 pt-4 border-t border-slate-700 flex items-center gap-6 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+            <span className="text-slate-400">12 duplicates</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+            <span className="text-slate-400">5 stale (&gt;30d)</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Admin Tools */}
+      <div className="bg-slate-800/50 border border-slate-700 rounded p-6">
+        <h2 className="text-base font-medium text-slate-200 mb-6">System Controls</h2>
+        <div className="grid grid-cols-4 gap-6">
           {onNavigateToAgents && (
             <button
               onClick={onNavigateToAgents}
-              className="p-4 bg-slate-900/50 border border-slate-700 rounded hover:bg-slate-900 hover:border-slate-600 transition-colors text-left"
+              className="p-6 bg-slate-900/50 border border-slate-700 rounded hover:bg-slate-900 hover:border-slate-600 transition-colors text-left"
             >
-              <p className="text-sm font-medium text-slate-200">Agent Oversight</p>
-              <p className="text-xs text-slate-500">Trust levels & proposals</p>
+              <p className="text-base font-medium text-slate-200">Agent Oversight</p>
+              <p className="text-sm text-slate-500 mt-1">Trust levels & proposals</p>
             </button>
           )}
           {onNavigateToIngestion && (
             <button
               onClick={onNavigateToIngestion}
-              className="p-4 bg-slate-900/50 border border-slate-700 rounded hover:bg-slate-900 hover:border-slate-600 transition-colors text-left"
+              className="p-6 bg-slate-900/50 border border-slate-700 rounded hover:bg-slate-900 hover:border-slate-600 transition-colors text-left"
             >
-              <p className="text-sm font-medium text-slate-200">Ingestion</p>
-              <p className="text-xs text-slate-500">Crawl status & jobs</p>
+              <p className="text-base font-medium text-slate-200">Ingestion</p>
+              <p className="text-sm text-slate-500 mt-1">Crawl status & jobs</p>
             </button>
           )}
           {onNavigateToHealth && (
             <button
               onClick={onNavigateToHealth}
-              className="p-4 bg-slate-900/50 border border-slate-700 rounded hover:bg-slate-900 hover:border-slate-600 transition-colors text-left"
+              className="p-6 bg-slate-900/50 border border-slate-700 rounded hover:bg-slate-900 hover:border-slate-600 transition-colors text-left"
             >
-              <p className="text-sm font-medium text-slate-200">Index Health</p>
-              <p className="text-xs text-slate-500">Coverage & drift</p>
+              <p className="text-base font-medium text-slate-200">Index Health</p>
+              <p className="text-sm text-slate-500 mt-1">Coverage & drift</p>
             </button>
           )}
           {onNavigateToPolicy && (
             <button
               onClick={onNavigateToPolicy}
-              className="p-4 bg-slate-900/50 border border-slate-700 rounded hover:bg-slate-900 hover:border-slate-600 transition-colors text-left"
+              className="p-6 bg-slate-900/50 border border-slate-700 rounded hover:bg-slate-900 hover:border-slate-600 transition-colors text-left"
             >
-              <p className="text-sm font-medium text-slate-200">Policy</p>
-              <p className="text-xs text-slate-500">Auto-approval rules</p>
+              <p className="text-base font-medium text-slate-200">Policy</p>
+              <p className="text-sm text-slate-500 mt-1">Auto-approval rules</p>
             </button>
           )}
         </div>

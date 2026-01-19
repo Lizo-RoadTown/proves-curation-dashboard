@@ -72,17 +72,17 @@ export function KnowledgeMap({ tiles, onSelectTile, loading = false }: Knowledge
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
       {tiles.map((tile) => (
         <button
           key={tile.id}
           onClick={() => onSelectTile(tile.id)}
-          className="p-4 bg-slate-800/50 border border-slate-700 rounded hover:bg-slate-800 hover:border-slate-600 transition-colors text-left"
+          className="p-6 bg-slate-800/50 border border-slate-700 rounded hover:bg-slate-800 hover:border-slate-600 transition-colors text-left min-h-[140px] flex flex-col"
         >
-          <h3 className="font-medium text-slate-200">{tile.title}</h3>
-          <p className="text-sm text-slate-500 mt-1">{tile.description}</p>
-          <p className="text-sm text-slate-400 mt-2">
-            {tile.count.toLocaleString()} items
+          <h3 className="text-base font-medium text-slate-200">{tile.title}</h3>
+          <p className="text-sm text-slate-500 mt-2 flex-1">{tile.description}</p>
+          <p className="text-lg text-slate-300 mt-4">
+            {tile.count.toLocaleString()} <span className="text-sm text-slate-500">items</span>
           </p>
         </button>
       ))}

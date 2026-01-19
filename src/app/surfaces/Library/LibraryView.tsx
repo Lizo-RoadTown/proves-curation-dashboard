@@ -18,6 +18,7 @@ import { TileIndexView, type IndexEntity } from "./TileIndexView";
 import { useLibrary } from "@/hooks/useLibrary";
 import { supabase } from "@/lib/supabase";
 import { Loader2 } from "lucide-react";
+import { RadialBarChart, RadialBar, PolarAngleAxis } from "recharts";
 
 // Stats types
 interface DomainStats {
@@ -158,7 +159,7 @@ export function LibraryView() {
   }
 
   return (
-    <div className="h-full min-h-full flex flex-col bg-[#0f172a]">
+    <div className="h-full flex flex-col bg-[#0f172a]">
       {/* Header */}
       <div className="p-6 border-b border-[#334155]">
         <h1 className="text-xl font-semibold text-[#e2e8f0] mb-1">Knowledge Library</h1>
@@ -224,22 +225,95 @@ export function LibraryView() {
           </div>
         )}
 
-        {/* Stats Summary */}
-        <div className="flex items-center gap-6 mb-6 text-sm">
-          <span className="text-[#94a3b8]">
-            <span className="text-[#e2e8f0] font-medium">{stats?.totalEntities || 0}</span> entities
-          </span>
-          <span className="text-[#94a3b8]">
-            <span className="text-[#e2e8f0] font-medium">{stats?.totalEdges || 0}</span> connections
-          </span>
-          <span className="text-[#94a3b8]">
-            <span className="text-[#e2e8f0] font-medium">{stats?.byOrg.length || 0}</span> teams
-          </span>
+        {/* Knowledge Graph Health - Cockpit Style Gauges */}
+        <div className="grid grid-cols-3 gap-6 mb-8">
+          {/* Entity Count Gauge */}
+          <div className="p-6 bg-[#1e293b]/50 border border-[#334155] rounded flex items-center gap-6">
+            <div className="relative w-24 h-24 flex-shrink-0">
+              <RadialBarChart
+                width={96}
+                height={96}
+                cx={48}
+                cy={48}
+                innerRadius={32}
+                outerRadius={46}
+                startAngle={90}
+                endAngle={-270}
+                data={[{ value: 80, fill: "#06b6d4" }]}
+              >
+                <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+                <RadialBar background={{ fill: "#334155" }} dataKey="value" cornerRadius={8} />
+              </RadialBarChart>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-lg font-bold text-cyan-400">{stats?.totalEntities || 0}</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-base font-medium text-[#e2e8f0]">Entities</p>
+              <p className="text-sm text-[#64748b] mt-1">Verified knowledge</p>
+            </div>
+          </div>
+
+          {/* Connections Gauge */}
+          <div className="p-6 bg-[#1e293b]/50 border border-[#334155] rounded flex items-center gap-6">
+            <div className="relative w-24 h-24 flex-shrink-0">
+              <RadialBarChart
+                width={96}
+                height={96}
+                cx={48}
+                cy={48}
+                innerRadius={32}
+                outerRadius={46}
+                startAngle={90}
+                endAngle={-270}
+                data={[{ value: Math.min((stats?.totalEdges || 0) / Math.max(stats?.totalEntities || 1, 1) * 50, 100), fill: "#8b5cf6" }]}
+              >
+                <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+                <RadialBar background={{ fill: "#334155" }} dataKey="value" cornerRadius={8} />
+              </RadialBarChart>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-lg font-bold text-purple-400">{stats?.totalEdges || 0}</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-base font-medium text-[#e2e8f0]">Connections</p>
+              <p className="text-sm text-[#64748b] mt-1">
+                {stats?.totalEntities ? ((stats?.totalEdges || 0) / stats.totalEntities).toFixed(1) : 0} avg/entity
+              </p>
+            </div>
+          </div>
+
+          {/* Teams Gauge */}
+          <div className="p-6 bg-[#1e293b]/50 border border-[#334155] rounded flex items-center gap-6">
+            <div className="relative w-24 h-24 flex-shrink-0">
+              <RadialBarChart
+                width={96}
+                height={96}
+                cx={48}
+                cy={48}
+                innerRadius={32}
+                outerRadius={46}
+                startAngle={90}
+                endAngle={-270}
+                data={[{ value: Math.min((stats?.byOrg.length || 0) * 20, 100), fill: "#22c55e" }]}
+              >
+                <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+                <RadialBar background={{ fill: "#334155" }} dataKey="value" cornerRadius={8} />
+              </RadialBarChart>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-lg font-bold text-green-400">{stats?.byOrg.length || 0}</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-base font-medium text-[#e2e8f0]">Teams</p>
+              <p className="text-sm text-[#64748b] mt-1">Contributing</p>
+            </div>
+          </div>
         </div>
 
         {/* Knowledge Map */}
-        <div>
-          <h2 className="text-sm font-medium text-[#94a3b8] mb-4">Browse by Category</h2>
+        <div className="flex-1">
+          <h2 className="text-base font-medium text-[#94a3b8] mb-6">Browse by Category</h2>
           <KnowledgeMap
             tiles={tiles}
             onSelectTile={handleSelectTile}
