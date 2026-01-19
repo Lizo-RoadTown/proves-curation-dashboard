@@ -429,24 +429,6 @@ export function EngineerReview({
         </div>
       </Card>
 
-      {/* WHY THIS MATTERS - GNN Explanation */}
-      <Card className="p-6 bg-[#1e293b]/50 border-[#334155]">
-        <div className="flex-1">
-          <h2 className="text-lg font-semibold text-[#e2e8f0] mb-2">
-            Your Answers Power the Knowledge Graph
-          </h2>
-          <p className="text-sm text-[#94a3b8] mb-3">
-            This isn't busywork. Your metadata becomes edge features in a Graph Neural Network that helps the entire community.
-          </p>
-          <div className="grid grid-cols-2 gap-3 text-xs text-[#64748b]">
-            <div>Weights predictions by confidence</div>
-            <div>Flags knowledge at risk of loss</div>
-            <div>Triggers refresh when stale</div>
-            <div>Predicts onboarding difficulty</div>
-          </div>
-        </div>
-      </Card>
-
       {/* Knowledge Capture - The 7 Questions */}
       <Card className="p-6 bg-[#1e293b]/50 border-[#334155]">
         <div className="flex items-center gap-2 mb-4">

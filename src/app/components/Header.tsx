@@ -2,20 +2,14 @@
  * Header - Application Top Bar
  *
  * Enterprise ops console header with:
- * - Team selector
+ * - Team selector (native select - dropdowns don't work)
  * - Graph toggle + pin (prominent, global control)
- * - User menu
+ * - User info + Sign Out button
  */
 
-import { ChevronDown, LogOut, Network, Pin, PinOff } from "lucide-react";
+import { useState } from "react";
+import { LogOut, Network, Pin, PinOff, ChevronDown } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/app/components/ui/dropdown-menu";
 
 interface HeaderProps {
   currentTeam: string;
@@ -49,8 +43,15 @@ export function Header({
   onGraphPinToggle,
   showGraphControls = true,
 }: HeaderProps) {
-  // Debug logging
-  console.log('[Header] teams:', teams, 'currentTeam:', currentTeam);
+  const [isTeamOpen, setIsTeamOpen] = useState(false);
+
+  const handleSignOut = () => {
+    console.log('[Header] Sign out clicked');
+    if (onSignOut) {
+      onSignOut();
+    }
+  };
+
   return (
     <header className="border-b border-[#334155] bg-[#0f172a] px-6 py-3">
       <div className="flex items-center justify-between">
@@ -61,31 +62,46 @@ export function Header({
           {/* Divider */}
           <div className="w-px h-6 bg-[#334155]" />
 
-          {/* Team Selector */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="gap-2 text-[#94a3b8] hover:bg-[#1e293b] hover:text-[#e2e8f0]"
-              >
-                <span>{currentTeam}</span>
-                <ChevronDown className="h-4 w-4 text-[#64748b]" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="bg-[#1e293b] border-[#334155]">
-              {teams.map((team) => (
-                <DropdownMenuItem
-                  key={team}
-                  onClick={() => onTeamChange(team)}
-                  className={`text-[#94a3b8] hover:bg-[#334155] hover:text-[#e2e8f0] cursor-pointer ${
-                    team === currentTeam ? "bg-[#334155]/50" : ""
-                  }`}
-                >
-                  {team}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Team Selector - Custom dropdown that actually works */}
+          <div className="relative">
+            <button
+              onClick={() => setIsTeamOpen(!isTeamOpen)}
+              className="flex items-center gap-2 px-3 py-1.5 text-[#94a3b8] hover:bg-[#1e293b] hover:text-[#e2e8f0] rounded-md transition-colors"
+            >
+              <span>{currentTeam}</span>
+              <ChevronDown className={`h-4 w-4 text-[#64748b] transition-transform ${isTeamOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isTeamOpen && (
+              <>
+                {/* Backdrop to close on click outside */}
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setIsTeamOpen(false)}
+                />
+                {/* Dropdown menu */}
+                <div className="absolute top-full left-0 mt-1 min-w-[200px] bg-[#1e293b] border border-[#334155] rounded-md shadow-lg z-50">
+                  {teams.map((team) => (
+                    <button
+                      key={team}
+                      onClick={() => {
+                        console.log('[Header] Team selected:', team);
+                        onTeamChange(team);
+                        setIsTeamOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                        team === currentTeam
+                          ? "bg-[#334155] text-[#e2e8f0]"
+                          : "text-[#94a3b8] hover:bg-[#334155] hover:text-[#e2e8f0]"
+                      }`}
+                    >
+                      {team}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
 
           {pendingCount > 0 && (
             <span className="text-sm text-[#94a3b8]">
@@ -138,44 +154,25 @@ export function Header({
           {/* Divider */}
           <div className="w-px h-6 bg-[#334155]" />
 
-          {/* User Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="gap-2 hover:bg-[#1e293b]">
-                <div className="h-7 w-7 rounded-full bg-[#334155] flex items-center justify-center text-[#94a3b8] text-sm">
-                  {userName.charAt(0).toUpperCase()}
-                </div>
-                <span className="text-sm text-[#94a3b8]">{userName}</span>
-                <ChevronDown className="h-4 w-4 text-[#64748b]" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-[#1e293b] border-[#334155]">
-              <div className="px-3 py-2">
-                <div className="text-sm text-[#e2e8f0]">{userName}</div>
-                <div className="text-xs text-[#64748b]">{userRole}</div>
-              </div>
-              <DropdownMenuSeparator className="bg-[#334155]" />
-              <DropdownMenuItem className="text-[#94a3b8] hover:bg-[#334155] hover:text-[#e2e8f0] cursor-pointer">
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={onSignOut}
-                className="text-[#94a3b8] hover:bg-[#334155] hover:text-[#e2e8f0] cursor-pointer"
-              >
-                Sign Out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* User Info */}
+          <div className="flex items-center gap-2">
+            <div className="h-7 w-7 rounded-full bg-[#334155] flex items-center justify-center text-[#94a3b8] text-sm">
+              {userName.charAt(0).toUpperCase()}
+            </div>
+            <div className="text-sm">
+              <span className="text-[#94a3b8]">{userName}</span>
+              <span className="text-[#64748b] ml-2">({userRole})</span>
+            </div>
+          </div>
 
-          {/* Sign Out */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onSignOut}
-            className="text-[#64748b] hover:text-[#94a3b8] hover:bg-[#1e293b]"
+          {/* Sign Out Button - Clearly visible and clickable */}
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-2 px-3 py-1.5 text-[#94a3b8] hover:text-[#e2e8f0] hover:bg-[#1e293b] rounded-md transition-colors border border-[#334155]"
           >
             <LogOut className="h-4 w-4" />
-          </Button>
+            <span className="text-sm">Sign Out</span>
+          </button>
         </div>
       </div>
     </header>

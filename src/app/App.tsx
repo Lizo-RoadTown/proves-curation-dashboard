@@ -27,7 +27,8 @@ type Surface = "library" | "admin" | "mission-control";
 type AuthView = "login" | "signup";
 
 // DEV MODE: Skip auth for local development
-const DEV_SKIP_AUTH = import.meta.env.DEV;
+// Set to false to test real auth flow even in dev
+const DEV_SKIP_AUTH = false;
 
 // Graph state persistence key
 const GRAPH_PINNED_KEY = "proves_graph_pinned";
@@ -147,7 +148,15 @@ export default function App() {
   };
 
   const handleSignOut = async () => {
+    console.log('[App] Signing out...');
+    // Clear localStorage flags
+    localStorage.removeItem('proves_org_selected');
+    localStorage.removeItem(GRAPH_PINNED_KEY);
+    // Sign out from Supabase
     await signOut();
+    // Reset local state
+    setShowOrgPicker(false);
+    setCurrentSurface("mission-control");
   };
 
   const handleGraphToggle = () => {
