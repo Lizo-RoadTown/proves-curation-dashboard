@@ -2,8 +2,9 @@
  * MobileReview - Mobile-optimized engineer knowledge review
  *
  * PURPOSE: Quick, thumb-friendly review on mobile devices
- * - Swipe cards for quick decisions
- * - Tap to verify epistemic metadata
+ * - Show coupling info: FROM, TO, WHAT FLOWS
+ * - Tap to agree/disagree with each field
+ * - Edit mode to correct information
  * - Large touch targets for accuracy checks
  *
  * Entry point: Sign-in choice "Mobile Review App"
@@ -23,6 +24,9 @@ import {
   Edit2,
   LogOut,
   Loader2,
+  Save,
+  X,
+  ArrowRight,
 } from "lucide-react";
 import { useReviewExtractions } from "@/hooks/useReviewExtractions";
 import type { ReviewExtractionDTO, ReviewEpistemics } from "@/types/review";
@@ -31,6 +35,25 @@ interface MobileReviewProps {
   onExit: () => void;
   organizationId?: string;
 }
+
+// Helper to extract coupling fields from candidate_payload
+function extractCouplingFields(payload: Record<string, unknown>) {
+  return {
+    source: (payload.source || payload.from || payload.source_component || payload.from_component || "") as string,
+    target: (payload.target || payload.to || payload.target_component || payload.to_component || "") as string,
+    flowType: (payload.flow_type || payload.what_flows || payload.flow || payload.coupling_type || "") as string,
+    description: (payload.description || payload.summary || "") as string,
+    couplingStrength: (payload.coupling_strength || payload.strength || "") as string,
+  };
+}
+
+// Core coupling fields for FRAMES review
+const COUPLING_FIELDS = [
+  { id: "source", label: "FROM", placeholder: "Source component", icon: "→" },
+  { id: "target", label: "TO", placeholder: "Target component", icon: "←" },
+  { id: "flowType", label: "WHAT FLOWS", placeholder: "Data, power, commands...", icon: "⟷" },
+  { id: "description", label: "DESCRIPTION", placeholder: "What this coupling does", icon: "📝" },
+];
 
 // Simplified epistemic fields for mobile
 const MOBILE_EPISTEMIC_CHECKS = [
@@ -45,20 +68,45 @@ const MOBILE_EPISTEMIC_CHECKS = [
 export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
   const { extractions, loading, error, submitDecision, refetch } = useReviewExtractions(organizationId);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [accuracyChecks, setAccuracyChecks] = useState<Record<string, boolean | null>>({
-    exists: null,
-    evidence: null,
-    accurate: null,
-  });
+
+  // Field-level agreement tracking (thumbs up/down per field)
+  const [fieldAgreement, setFieldAgreement] = useState<Record<string, boolean | null>>({});
+
+  // Edit mode state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedFields, setEditedFields] = useState<Record<string, string>>({});
+
   const [verifiedEpistemics, setVerifiedEpistemics] = useState<Set<string>>(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const current = extractions[currentIndex];
   const total = extractions.length;
 
+  // Extract coupling fields from current extraction
+  const couplingFields = current ? extractCouplingFields(current.candidate_payload) : null;
+
   const resetChecks = () => {
-    setAccuracyChecks({ exists: null, evidence: null, accurate: null });
+    setFieldAgreement({});
     setVerifiedEpistemics(new Set());
+    setIsEditing(false);
+    setEditedFields({});
+  };
+
+  const startEditing = () => {
+    if (couplingFields) {
+      setEditedFields({
+        source: couplingFields.source,
+        target: couplingFields.target,
+        flowType: couplingFields.flowType,
+        description: couplingFields.description,
+      });
+      setIsEditing(true);
+    }
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setEditedFields({});
   };
 
   const goNext = () => {
@@ -79,8 +127,19 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
     if (!current) return;
     setIsSubmitting(true);
     try {
+      const hasEdits = Object.keys(editedFields).length > 0;
+      const agreedFields = Object.entries(fieldAgreement)
+        .filter(([_, v]) => v === true)
+        .map(([k]) => k);
+      const disagreedFields = Object.entries(fieldAgreement)
+        .filter(([_, v]) => v === false)
+        .map(([k]) => k);
+
       await submitDecision(current.extraction_id, "accept", {
-        decision_reason: "Mobile quick review - approved",
+        decision_reason: hasEdits
+          ? `Mobile review - approved with edits to: ${Object.keys(editedFields).join(", ")}`
+          : `Mobile review - approved. Agreed: ${agreedFields.join(", ") || "all"}`,
+        // TODO: Pass edited payload when backend supports it
       });
       goNext();
     } finally {
@@ -92,8 +151,14 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
     if (!current) return;
     setIsSubmitting(true);
     try {
+      const disagreedFields = Object.entries(fieldAgreement)
+        .filter(([_, v]) => v === false)
+        .map(([k]) => k);
+
       await submitDecision(current.extraction_id, "reject", {
-        decision_reason: reason,
+        decision_reason: disagreedFields.length > 0
+          ? `${reason}. Disagreed with: ${disagreedFields.join(", ")}`
+          : reason,
         rejection_category: "other",
       });
       goNext();
@@ -102,9 +167,11 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
     }
   };
 
-  const allAccuracyPassed = Object.values(accuracyChecks).every(v => v === true);
-  const anyAccuracyFailed = Object.values(accuracyChecks).some(v => v === false);
-  const allChecked = Object.values(accuracyChecks).every(v => v !== null);
+  // Check if user has reviewed the key coupling fields
+  const coreFieldIds = ["source", "target", "flowType"];
+  const hasReviewedCoreFields = coreFieldIds.some(id => fieldAgreement[id] !== undefined);
+  const anyFieldDisagreed = Object.values(fieldAgreement).some(v => v === false);
+  const allCoreFieldsAgreed = coreFieldIds.every(id => fieldAgreement[id] === true);
 
   if (loading) {
     return (
@@ -157,6 +224,7 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
   }
 
   const { candidate_key, candidate_type, evidence, snapshot, epistemics } = current;
+  const coupling = couplingFields!;
 
   return (
     <div className="min-h-screen bg-[#0f172a] flex flex-col">
@@ -171,7 +239,15 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
             {candidate_type}
           </Badge>
         </div>
-        <div className="w-5" /> {/* Spacer */}
+        {!isEditing ? (
+          <button onClick={startEditing} className="text-[#94a3b8] hover:text-[#e2e8f0]">
+            <Edit2 className="h-5 w-5" />
+          </button>
+        ) : (
+          <button onClick={cancelEditing} className="text-red-400 hover:text-red-300">
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </header>
 
       {/* Content */}
@@ -180,6 +256,98 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
         <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-4">
           <h2 className="text-lg font-semibold text-[#e2e8f0] break-words">{candidate_key}</h2>
           <p className="text-sm text-[#64748b] mt-1">{candidate_type}</p>
+        </div>
+
+        {/* COUPLING FIELDS - The Core FRAMES Info */}
+        <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs text-[#64748b] uppercase tracking-wider">Coupling Details</span>
+            {!isEditing && (
+              <span className="text-xs text-[#64748b]">Tap 👍/👎 to agree or disagree</span>
+            )}
+          </div>
+
+          {/* FROM → TO visual */}
+          {!isEditing && (coupling.source || coupling.target) && (
+            <div className="flex items-center justify-center gap-2 mb-4 py-3 bg-[#334155]/30 rounded-lg">
+              <span className="text-[#e2e8f0] font-medium text-sm truncate max-w-[40%]">
+                {coupling.source || "?"}
+              </span>
+              <ArrowRight className="h-4 w-4 text-[#06b6d4] flex-shrink-0" />
+              <span className="text-[#e2e8f0] font-medium text-sm truncate max-w-[40%]">
+                {coupling.target || "?"}
+              </span>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {COUPLING_FIELDS.map((field) => {
+              const value = isEditing
+                ? editedFields[field.id] || ""
+                : coupling[field.id as keyof typeof coupling] || "";
+              const agreement = fieldAgreement[field.id];
+
+              return (
+                <div key={field.id} className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-[#64748b] uppercase tracking-wider flex-1">
+                      {field.label}
+                    </span>
+                    {!isEditing && (
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => setFieldAgreement(prev => ({
+                            ...prev,
+                            [field.id]: prev[field.id] === true ? null : true
+                          }))}
+                          className={`p-1.5 rounded transition-all ${
+                            agreement === true
+                              ? "bg-green-500/30 text-green-400"
+                              : "bg-[#334155]/50 text-[#64748b]"
+                          }`}
+                        >
+                          <ThumbsUp className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => setFieldAgreement(prev => ({
+                            ...prev,
+                            [field.id]: prev[field.id] === false ? null : false
+                          }))}
+                          className={`p-1.5 rounded transition-all ${
+                            agreement === false
+                              ? "bg-red-500/30 text-red-400"
+                              : "bg-[#334155]/50 text-[#64748b]"
+                          }`}
+                        >
+                          <ThumbsDown className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={editedFields[field.id] || ""}
+                      onChange={(e) => setEditedFields(prev => ({
+                        ...prev,
+                        [field.id]: e.target.value
+                      }))}
+                      placeholder={field.placeholder}
+                      className="w-full px-3 py-2 bg-[#334155] border border-[#475569] rounded-lg text-[#e2e8f0] text-sm placeholder:text-[#64748b] focus:outline-none focus:ring-2 focus:ring-[#06b6d4]/50"
+                    />
+                  ) : (
+                    <p className={`text-sm px-3 py-2 rounded-lg ${
+                      value
+                        ? "text-[#e2e8f0] bg-[#334155]/30"
+                        : "text-[#64748b] italic bg-[#334155]/20"
+                    } ${agreement === false ? "ring-1 ring-red-500/50" : ""} ${agreement === true ? "ring-1 ring-green-500/50" : ""}`}>
+                      {value || `No ${field.label.toLowerCase()} specified`}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Evidence Quote */}
@@ -200,45 +368,6 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
           <p className="text-sm text-[#cbd5e1] italic leading-relaxed">
             "{evidence.raw_text || "No evidence text"}"
           </p>
-        </div>
-
-        {/* Quick Accuracy Checks - Large Touch Targets */}
-        <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-4">
-          <span className="text-xs text-[#64748b] uppercase tracking-wider block mb-3">Is this accurate?</span>
-          <div className="space-y-3">
-            {[
-              { id: "exists", q: "Does this exist?", sub: "Not hallucinated?" },
-              { id: "evidence", q: "Evidence matches?", sub: "Quote supports claim?" },
-              { id: "accurate", q: "Details correct?", sub: "Names, values, behavior?" },
-            ].map((item) => (
-              <div key={item.id} className="flex items-center gap-3">
-                <button
-                  onClick={() => setAccuracyChecks(prev => ({ ...prev, [item.id]: true }))}
-                  className={`p-3 rounded-lg transition-all ${
-                    accuracyChecks[item.id] === true
-                      ? "bg-green-500/30 text-green-400 ring-2 ring-green-500/50"
-                      : "bg-[#334155] text-[#64748b]"
-                  }`}
-                >
-                  <ThumbsUp className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => setAccuracyChecks(prev => ({ ...prev, [item.id]: false }))}
-                  className={`p-3 rounded-lg transition-all ${
-                    accuracyChecks[item.id] === false
-                      ? "bg-red-500/30 text-red-400 ring-2 ring-red-500/50"
-                      : "bg-[#334155] text-[#64748b]"
-                  }`}
-                >
-                  <ThumbsDown className="h-5 w-5" />
-                </button>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-[#e2e8f0]">{item.q}</p>
-                  <p className="text-xs text-[#64748b]">{item.sub}</p>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
 
         {/* Epistemic Quick Checks (if available) */}
@@ -307,14 +436,48 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
         </div>
 
         {/* Decision Buttons */}
-        {!allChecked ? (
-          <p className="text-center text-sm text-[#64748b]">
-            Answer accuracy checks to unlock decisions
-          </p>
-        ) : anyAccuracyFailed ? (
+        {isEditing ? (
           <div className="grid grid-cols-2 gap-3">
             <Button
-              onClick={() => handleReject("Accuracy check failed")}
+              onClick={cancelEditing}
+              variant="outline"
+              className="h-14 border-[#334155] text-[#94a3b8]"
+            >
+              <X className="h-5 w-5 mr-2" />
+              Cancel
+            </Button>
+            <Button
+              onClick={handleApprove}
+              disabled={isSubmitting}
+              className="h-14 bg-[#06b6d4]/20 hover:bg-[#06b6d4]/30 text-[#06b6d4] border border-[#06b6d4]/30"
+            >
+              {isSubmitting ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <>
+                  <Save className="h-5 w-5 mr-2" />
+                  Save & Approve
+                </>
+              )}
+            </Button>
+          </div>
+        ) : !hasReviewedCoreFields ? (
+          <div className="space-y-2">
+            <p className="text-center text-sm text-[#64748b]">
+              Review the coupling fields above (👍 or 👎)
+            </p>
+            <Button
+              onClick={goNext}
+              variant="outline"
+              className="w-full h-12 border-[#334155] text-[#94a3b8]"
+            >
+              Skip for now
+            </Button>
+          </div>
+        ) : anyFieldDisagreed ? (
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              onClick={() => handleReject("Field disagreement - needs correction")}
               disabled={isSubmitting}
               className="h-14 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
             >
@@ -322,15 +485,14 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
               Reject
             </Button>
             <Button
-              onClick={goNext}
-              disabled={isSubmitting}
-              variant="outline"
-              className="h-14 border-[#334155] text-[#94a3b8]"
+              onClick={startEditing}
+              className="h-14 bg-[#06b6d4]/20 hover:bg-[#06b6d4]/30 text-[#06b6d4] border border-[#06b6d4]/30"
             >
-              Skip
+              <Edit2 className="h-5 w-5 mr-2" />
+              Edit & Fix
             </Button>
           </div>
-        ) : allAccuracyPassed ? (
+        ) : (
           <div className="grid grid-cols-2 gap-3">
             <Button
               onClick={() => handleReject("Needs more review")}
@@ -356,7 +518,7 @@ export function MobileReview({ onExit, organizationId }: MobileReviewProps) {
               )}
             </Button>
           </div>
-        ) : null}
+        )}
       </div>
     </div>
   );
