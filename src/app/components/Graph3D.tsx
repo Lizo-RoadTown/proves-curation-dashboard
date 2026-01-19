@@ -1,19 +1,17 @@
 /**
- * Graph3D - 3D Knowledge Graph with Mission Control Instruments
+ * Graph3D - 3D Knowledge Graph with Heat Overlay
  *
  * Uses 3d-force-graph for the knowledge graph visualization.
- * Layers Mission Control instruments (pipelines, agent avatar, heat volume)
- * directly into the same Three.js scene for a unified 3D experience.
  *
- * Mission Control instruments:
- * - PipelineStreams: Animated particles flowing along curves (inbound/outbound)
- * - AgentAvatar: Single 3D object encoding health/confidence/drift/error via motion
- * - HeatVolume: Point sprites with additive blending showing validation activity
+ * Heat overlay (optional):
+ * - Shows validation activity as a breathing glow around nodes
+ * - Lives in the graph scene because it's about WHERE validation is happening
+ * - Point sprites with additive blending
  *
  * Click on nodes/edges to see details in a side panel.
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ForceGraph3D from '3d-force-graph';
 import * as THREE from 'three';
 import { Card } from '@/app/components/ui/card';
@@ -21,8 +19,6 @@ import { Button } from '@/app/components/ui/button';
 import { RefreshCw, Box, X, Circle, ArrowRight } from 'lucide-react';
 import { Badge } from '@/app/components/ui/badge';
 import { supabase } from '@/lib/supabase';
-// Heat overlay for validation activity (lives in graph scene, as it's about graph nodes)
-import * as THREE from 'three';
 
 // =============================================================================
 // TYPES
@@ -188,7 +184,70 @@ export function Graph3D({
         const camera = graph.camera() as THREE.Camera;
         const renderer = graph.renderer() as THREE.WebGLRenderer;
 
-        // Animation loop for auto-rotate
+        // Heat overlay: breathing glow around nodes showing validation activity
+        let heatParticles: THREE.Points | null = null;
+        let heatTime = 0;
+
+        if (enableHeatOverlay && nodes.length > 0) {
+          const HEAT_PARTICLES_PER_NODE = 8;
+          const totalParticles = nodes.length * HEAT_PARTICLES_PER_NODE;
+
+          const heatGeometry = new THREE.BufferGeometry();
+          const heatPositions = new Float32Array(totalParticles * 3);
+          const heatColors = new Float32Array(totalParticles * 3);
+          const heatSizes = new Float32Array(totalParticles);
+          const heatSeeds = new Float32Array(totalParticles); // For animation variation
+
+          // Initialize particles around each node
+          let idx = 0;
+          nodes.forEach((node, nodeIdx) => {
+            const color = new THREE.Color(node.organizationColor);
+            // Validation activity based on confidence (lower confidence = more activity/heat)
+            const activity = 1 - (node.confidence || 0.5);
+
+            for (let i = 0; i < HEAT_PARTICLES_PER_NODE; i++) {
+              // Spread particles in a sphere around node origin (positions will update in animation)
+              heatPositions[idx * 3] = 0;
+              heatPositions[idx * 3 + 1] = 0;
+              heatPositions[idx * 3 + 2] = 0;
+
+              // Warmer colors for more activity
+              const hue = activity > 0.5 ? 0.05 : 0.15; // Red-orange for high activity, yellow-green for low
+              const heatColor = new THREE.Color().setHSL(hue, 0.9, 0.5 + activity * 0.3);
+              heatColors[idx * 3] = heatColor.r;
+              heatColors[idx * 3 + 1] = heatColor.g;
+              heatColors[idx * 3 + 2] = heatColor.b;
+
+              heatSizes[idx] = 3 + activity * 5;
+              heatSeeds[idx] = Math.random() * Math.PI * 2;
+              idx++;
+            }
+          });
+
+          heatGeometry.setAttribute('position', new THREE.BufferAttribute(heatPositions, 3));
+          heatGeometry.setAttribute('color', new THREE.BufferAttribute(heatColors, 3));
+          heatGeometry.setAttribute('size', new THREE.BufferAttribute(heatSizes, 1));
+
+          const heatMaterial = new THREE.PointsMaterial({
+            size: 6,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.4,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+            sizeAttenuation: true,
+          });
+
+          heatParticles = new THREE.Points(heatGeometry, heatMaterial);
+          scene.add(heatParticles);
+
+          // Store seeds for animation
+          (heatParticles as any)._heatSeeds = heatSeeds;
+          (heatParticles as any)._nodeCount = nodes.length;
+          (heatParticles as any)._particlesPerNode = HEAT_PARTICLES_PER_NODE;
+        }
+
+        // Animation loop for auto-rotate and heat overlay
         let angle = 0;
 
         const animate = () => {
@@ -202,6 +261,55 @@ export function Graph3D({
               y: 100,
               z: 400 * Math.cos(angle),
             });
+          }
+
+          // Animate heat overlay
+          if (heatParticles && enableHeatOverlay) {
+            heatTime += 0.016;
+            const positions = heatParticles.geometry.attributes.position.array as Float32Array;
+            const sizes = heatParticles.geometry.attributes.size.array as Float32Array;
+            const seeds = (heatParticles as any)._heatSeeds as Float32Array;
+            const nodeCount = (heatParticles as any)._nodeCount as number;
+            const particlesPerNode = (heatParticles as any)._particlesPerNode as number;
+
+            // Get current node positions from the graph
+            const graphData = graphRef.current?.graphData();
+            if (graphData?.nodes) {
+              let idx = 0;
+              graphData.nodes.forEach((node: any, nodeIdx: number) => {
+                const nx = node.x || 0;
+                const ny = node.y || 0;
+                const nz = node.z || 0;
+                const activity = 1 - (node.confidence || 0.5);
+
+                for (let i = 0; i < particlesPerNode; i++) {
+                  const seed = seeds[idx];
+                  // Breathing radius
+                  const breathe = 1 + Math.sin(heatTime * 2 + seed) * 0.3;
+                  const radius = (8 + activity * 12) * breathe;
+
+                  // Orbital motion
+                  const theta = seed + heatTime * (0.5 + activity);
+                  const phi = seed * 2 + heatTime * 0.3;
+
+                  positions[idx * 3] = nx + radius * Math.sin(theta) * Math.cos(phi);
+                  positions[idx * 3 + 1] = ny + radius * Math.sin(theta) * Math.sin(phi);
+                  positions[idx * 3 + 2] = nz + radius * Math.cos(theta);
+
+                  // Pulsing size
+                  sizes[idx] = (3 + activity * 5) * (0.8 + Math.sin(heatTime * 3 + seed * 2) * 0.2);
+
+                  idx++;
+                }
+              });
+            }
+
+            heatParticles.geometry.attributes.position.needsUpdate = true;
+            heatParticles.geometry.attributes.size.needsUpdate = true;
+
+            // Breathing opacity
+            const mat = heatParticles.material as THREE.PointsMaterial;
+            mat.opacity = 0.3 + Math.sin(heatTime * 1.5) * 0.15;
           }
 
           requestAnimationFrame(animate);

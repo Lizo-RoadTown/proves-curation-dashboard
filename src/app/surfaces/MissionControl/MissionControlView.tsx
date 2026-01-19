@@ -7,13 +7,16 @@
  * Layout: 4-pane grid
  * ┌─────────────────────────────────────┬──────────────┐
  * │                                     │  Pipelines   │
- * │         Knowledge Graph             │  (in/out)    │
+ * │   Knowledge Graph + Heat Overlay    │  (5 unis)    │
  * │         (largest pane)              ├──────────────┤
- * │                                     │    Agent     │
- * │                                     │   Avatar     │
+ * │                                     │   Agents     │
+ * │                                     │  (6 types)   │
  * └─────────────────────────────────────┴──────────────┘
  *
- * Each panel is its own rendering context - NOT world-positioned in 3D space.
+ * Each panel is its own rendering context:
+ * - Graph3D: Knowledge graph with heat overlay
+ * - PipelinePanel: 5 university pipelines (3D streams)
+ * - AgentAvatarPanel: 6 agent classes (3D motion-encoded)
  *
  * Rules:
  * - No editing, no forms
@@ -36,18 +39,8 @@ export function MissionControlView() {
     return () => clearInterval(interval);
   }, []);
 
-  // Mock state - would come from Supabase realtime
-  const pipelineState = {
-    inbound: { rate: 1.2, latencyMs: 350, status: 'healthy' as const },
-    outbound: { rate: 0.8, latencyMs: 420, status: 'healthy' as const },
-  };
-
-  const agentState = {
-    health: 0.95,
-    confidence: 0.88,
-    drift: 0.05,
-    errorRate: 0.02,
-  };
+  // These would come from Supabase realtime subscriptions
+  // For now, using defaults defined in the panel components
 
   return (
     <div className="h-full bg-[#0f172a] overflow-hidden flex flex-col">
@@ -68,31 +61,24 @@ export function MissionControlView() {
       </div>
 
       {/* 4-Pane Grid */}
-      <div className="flex-1 grid grid-cols-[1fr_320px] grid-rows-2 gap-1 p-1">
+      <div className="flex-1 grid grid-cols-[1fr_360px] grid-rows-2 gap-1 p-1">
         {/* Knowledge Graph - spans both rows on left */}
         <div className="row-span-2 bg-[#0f172a] rounded-lg overflow-hidden border border-[#334155]">
           <Graph3D
             height={window.innerHeight - 70}
             className="w-full h-full border-0 rounded-none"
+            enableHeatOverlay={true}
           />
         </div>
 
-        {/* Pipeline Panel - top right */}
+        {/* Pipeline Panel - top right (5 universities) */}
         <div className="bg-[#0f172a] rounded-lg overflow-hidden border border-[#334155]">
-          <PipelinePanel
-            inbound={pipelineState.inbound}
-            outbound={pipelineState.outbound}
-          />
+          <PipelinePanel pipelines={[]} />
         </div>
 
-        {/* Agent Avatar Panel - bottom right */}
+        {/* Agent Avatar Panel - bottom right (6 agent classes) */}
         <div className="bg-[#0f172a] rounded-lg overflow-hidden border border-[#334155]">
-          <AgentAvatarPanel
-            health={agentState.health}
-            confidence={agentState.confidence}
-            drift={agentState.drift}
-            errorRate={agentState.errorRate}
-          />
+          <AgentAvatarPanel agents={[]} />
         </div>
       </div>
     </div>
