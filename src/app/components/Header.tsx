@@ -167,8 +167,14 @@ export function Header({
 
           {/* Sign Out Button - Clearly visible and clickable */}
           <button
-            onClick={handleSignOut}
-            className="flex items-center gap-2 px-3 py-1.5 text-[#94a3b8] hover:text-[#e2e8f0] hover:bg-[#1e293b] rounded-md transition-colors border border-[#334155]"
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('[Header] Sign out button clicked');
+              handleSignOut();
+            }}
+            className="flex items-center gap-2 px-3 py-1.5 text-[#94a3b8] hover:text-[#e2e8f0] hover:bg-[#1e293b] rounded-md transition-colors border border-[#334155] cursor-pointer z-50 relative"
           >
             <LogOut className="h-4 w-4" />
             <span className="text-sm">Sign Out</span>
