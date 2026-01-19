@@ -11,6 +11,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { useCurrentOrganization } from "../hooks/useCurrentOrganization";
 import { Header } from "./components/Header";
 import { Navigation } from "./components/Navigation";
 import { LoginPage } from "./components/auth/LoginPage";
@@ -32,9 +33,14 @@ const GRAPH_PINNED_KEY = "proves_graph_pinned";
 
 export default function App() {
   const { user, loading, signOut } = useAuth();
+  const {
+    currentOrg,
+    organizations,
+    loading: orgLoading,
+    selectOrganization,
+  } = useCurrentOrganization();
   const [currentSurface, setCurrentSurface] = useState<Surface>("mission-control");
   const [authView, setAuthView] = useState<AuthView>("login");
-  const [currentTeam, setCurrentTeam] = useState("All Universities");
 
   // Graph visibility state
   const [graphVisible, setGraphVisible] = useState(false);
@@ -81,25 +87,26 @@ export default function App() {
   }
 
   // User is authenticated (or dev mode) - show main app
-  // PROVES partner universities - "All Universities" shows aggregate view
-  const teams = [
-    "All Universities",
-    "Cal Poly Pomona",
-    "Columbia University",
-    "Northeastern University",
-    "UC Santa Cruz",
-    "Texas State University",
-  ];
+  // Build teams list from real organizations
+  const teams = organizations.length > 0
+    ? organizations.map(org => org.org_name)
+    : ["Cal Poly Pomona", "Columbia University", "Northeastern University", "UC Santa Cruz", "Texas State University"];
+
+  const currentTeam = currentOrg?.org_name || teams[0];
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || "Dev User";
-  const userRole = "lead";
+  const userRole = currentOrg?.user_role || "lead";
   const pendingCount = 0;
 
   const handleNavigate = (surface: string) => {
     setCurrentSurface(surface as Surface);
   };
 
-  const handleTeamChange = (team: string) => {
-    setCurrentTeam(team);
+  const handleTeamChange = (teamName: string) => {
+    // Find the org by name and select it
+    const org = organizations.find(o => o.org_name === teamName);
+    if (org) {
+      selectOrganization(org.org_id);
+    }
   };
 
   const handleNotificationsClick = () => {
