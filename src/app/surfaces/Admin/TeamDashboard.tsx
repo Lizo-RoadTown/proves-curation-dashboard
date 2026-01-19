@@ -2,21 +2,15 @@
  * TeamDashboard - Admin Dashboard
  *
  * Shows team sources, review queue, and system controls.
+ * Includes organization selector for switching between universities.
  */
 
-import { ChevronRight, Loader2 } from "lucide-react";
+import { ChevronRight, Loader2, ChevronDown } from "lucide-react";
+import type { UserOrganization, OrganizationStats } from "@/hooks/useCurrentOrganization";
 
 // =============================================================================
 // TYPES
 // =============================================================================
-
-interface TeamStats {
-  our_sources: number;
-  our_pending_reviews: number;
-  our_verified_this_week: number;
-  our_total_contributed: number;
-  our_contributors: number;
-}
 
 interface TeamSource {
   id: string;
@@ -38,6 +32,12 @@ interface TeamDashboardProps {
   userRole: string;
   sources?: any[];
   sourcesLoading?: boolean;
+  // Organization selector
+  organizations?: UserOrganization[];
+  currentOrgId?: string;
+  orgStats?: OrganizationStats | null;
+  onSelectOrganization?: (orgId: string) => void;
+  // Navigation
   onNavigateToReview: () => void;
   onNavigateToSources: () => void;
   onNavigateToIngestion?: () => void;
@@ -51,18 +51,24 @@ export function TeamDashboard({
   userRole,
   sources = [],
   sourcesLoading = false,
+  organizations = [],
+  currentOrgId,
+  orgStats,
+  onSelectOrganization,
   onNavigateToReview,
   onNavigateToSources,
   onNavigateToIngestion,
   onNavigateToHealth,
   onNavigateToPolicy,
 }: TeamDashboardProps) {
-  const stats: TeamStats = {
-    our_sources: sources.length,
-    our_pending_reviews: 0,
-    our_verified_this_week: 0,
-    our_total_contributed: 0,
-    our_contributors: 8,
+  // Use real stats from Supabase if available, otherwise fallback
+  const stats = {
+    our_sources: orgStats?.our_sources ?? sources.length,
+    our_pending_reviews: orgStats?.our_pending_reviews ?? 0,
+    our_verified_entities: orgStats?.our_verified_entities ?? 0,
+    our_contributors: orgStats?.our_contributors ?? 0,
+    shared_total: orgStats?.shared_total ?? 0,
+    shared_from_us: orgStats?.shared_from_us ?? 0,
   };
 
   const teamSources: TeamSource[] = sources.map((s: any) => ({
@@ -77,31 +83,66 @@ export function TeamDashboard({
     pending_reviews: 0,
   }));
 
+  const currentOrg = organizations.find(o => o.org_id === currentOrgId);
+
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-semibold text-slate-100">{teamName}</h1>
-        <p className="text-sm text-slate-400">Admin Dashboard</p>
+      {/* Header with Organization Selector */}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-semibold text-slate-100">{teamName}</h1>
+            {/* Organization color indicator */}
+            {currentOrg && (
+              <span
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: currentOrg.org_color }}
+              />
+            )}
+          </div>
+          <p className="text-sm text-slate-400">Admin Dashboard · {userRole}</p>
+        </div>
+
+        {/* Organization Selector Dropdown */}
+        {organizations.length > 1 && onSelectOrganization && (
+          <div className="relative">
+            <select
+              value={currentOrgId}
+              onChange={(e) => onSelectOrganization(e.target.value)}
+              className="appearance-none bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-4 py-2 pr-10 cursor-pointer hover:border-slate-600 focus:outline-none focus:border-slate-500"
+            >
+              {organizations.map((org) => (
+                <option key={org.org_id} value={org.org_id}>
+                  {org.org_name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          </div>
+        )}
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-5 gap-4">
         <div className="p-4 bg-slate-800/50 border border-slate-700 rounded">
           <p className="text-2xl font-medium text-slate-100">{stats.our_pending_reviews}</p>
           <p className="text-sm text-slate-400">Pending Review</p>
         </div>
         <div className="p-4 bg-slate-800/50 border border-slate-700 rounded">
-          <p className="text-2xl font-medium text-slate-100">{stats.our_verified_this_week}</p>
-          <p className="text-sm text-slate-400">Verified This Week</p>
+          <p className="text-2xl font-medium text-slate-100">{stats.our_verified_entities}</p>
+          <p className="text-sm text-slate-400">Verified Entities</p>
         </div>
         <div className="p-4 bg-slate-800/50 border border-slate-700 rounded">
           <p className="text-2xl font-medium text-slate-100">{stats.our_sources}</p>
           <p className="text-sm text-slate-400">Active Sources</p>
         </div>
         <div className="p-4 bg-slate-800/50 border border-slate-700 rounded">
-          <p className="text-2xl font-medium text-slate-100">{stats.our_total_contributed}</p>
-          <p className="text-sm text-slate-400">Total Contributed</p>
+          <p className="text-2xl font-medium text-slate-100">{stats.our_contributors}</p>
+          <p className="text-sm text-slate-400">Contributors</p>
+        </div>
+        <div className="p-4 bg-slate-800/50 border border-slate-700 rounded">
+          <p className="text-2xl font-medium text-slate-100">{stats.shared_total}</p>
+          <p className="text-sm text-slate-400">Shared Entities</p>
         </div>
       </div>
 
@@ -124,7 +165,10 @@ export function TeamDashboard({
               <p className="text-slate-400 text-sm">No pending items</p>
             </div>
           ) : (
-            <p className="text-slate-400 text-sm">Queue items will appear here</p>
+            <div className="text-center py-8">
+              <p className="text-2xl font-medium text-amber-400">{stats.our_pending_reviews}</p>
+              <p className="text-slate-400 text-sm mt-1">items need review</p>
+            </div>
           )}
         </div>
 
@@ -147,19 +191,31 @@ export function TeamDashboard({
           ) : teamSources.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-slate-400 text-sm">No sources connected</p>
+              <button
+                onClick={onNavigateToSources}
+                className="mt-2 text-sm text-blue-400 hover:text-blue-300"
+              >
+                + Add a source
+              </button>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-48 overflow-y-auto">
               {teamSources.map((source) => (
                 <div
                   key={source.id}
                   className="flex items-center justify-between p-3 bg-slate-900/50 border border-slate-700 rounded"
                 >
-                  <div>
-                    <p className="text-sm text-slate-200">{source.name}</p>
-                    <p className="text-xs text-slate-500">
-                      {source.type} · Last: {source.last_crawl}
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${
+                      source.status === 'active' ? 'bg-green-500' :
+                      source.status === 'error' ? 'bg-red-500' : 'bg-yellow-500'
+                    }`} />
+                    <div>
+                      <p className="text-sm text-slate-200">{source.name}</p>
+                      <p className="text-xs text-slate-500">
+                        {source.type} · Last: {source.last_crawl}
+                      </p>
+                    </div>
                   </div>
                   <span className="text-xs text-slate-500">
                     {source.entities_found} items
@@ -181,7 +237,7 @@ export function TeamDashboard({
               className="p-4 bg-slate-900/50 border border-slate-700 rounded hover:bg-slate-900 hover:border-slate-600 transition-colors text-left"
             >
               <p className="text-sm font-medium text-slate-200">Ingestion</p>
-              <p className="text-xs text-slate-500">Crawl status</p>
+              <p className="text-xs text-slate-500">Crawl status & jobs</p>
             </button>
           )}
           {onNavigateToHealth && (

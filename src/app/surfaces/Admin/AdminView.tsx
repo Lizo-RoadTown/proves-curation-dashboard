@@ -35,8 +35,12 @@ export function AdminView() {
   // CRITICAL: Get current user's organization for tenant isolation
   const {
     currentOrg,
+    organizations,
+    stats: orgStats,
     loading: orgLoading,
     error: orgError,
+    selectOrganization,
+    refreshStats,
   } = useCurrentOrganization();
 
   // Review extractions - MUST be scoped to organization
@@ -185,6 +189,10 @@ export function AdminView() {
           userRole={currentOrg.user_role}
           sources={sources}
           sourcesLoading={sourcesLoading}
+          organizations={organizations}
+          currentOrgId={currentOrg.org_id}
+          orgStats={orgStats}
+          onSelectOrganization={selectOrganization}
           onNavigateToReview={() => setActiveSection("review")}
           onNavigateToSources={() => setActiveSection("sources")}
           onNavigateToIngestion={() => setActiveSection("ingestion")}
