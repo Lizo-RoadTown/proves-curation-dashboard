@@ -83,7 +83,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    // Use global scope to sign out from all tabs/devices
+    await supabase.auth.signOut({ scope: 'global' })
+    // Clear any lingering auth storage
+    localStorage.removeItem('sb-guigtpwxlqwueylbbcpx-auth-token')
+    // Force clear the state
+    setUser(null)
+    setSession(null)
   }
 
   const resetPassword = async (email: string) => {
