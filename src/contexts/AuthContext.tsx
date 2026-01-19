@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { User, Session, AuthError } from '@supabase/supabase-js'
-import { supabase } from '../lib/supabase'
+import { supabase, SUPABASE_AUTH_KEY } from '../lib/supabase'
 
 interface AuthContextType {
   user: User | null
@@ -83,7 +83,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
-    // Clear ALL storage FIRST before Supabase tries to persist anything
+    // Clear the specific Supabase auth key
+    localStorage.removeItem(SUPABASE_AUTH_KEY)
+
+    // Clear ALL storage that might have auth data
     const localKeysToRemove = Object.keys(localStorage).filter(key =>
       key.startsWith('sb-') || key.includes('supabase') || key.includes('proves')
     )
@@ -93,6 +96,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       key.startsWith('sb-') || key.includes('supabase')
     )
     sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key))
+
+    // Clear all cookies for this domain
+    document.cookie.split(';').forEach(cookie => {
+      const name = cookie.split('=')[0].trim()
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+    })
 
     // Now sign out from Supabase
     await supabase.auth.signOut({ scope: 'global' })
