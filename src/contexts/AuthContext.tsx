@@ -83,27 +83,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
-    // Use global scope to sign out from all tabs/devices
-    await supabase.auth.signOut({ scope: 'global' })
-
-    // Clear ALL Supabase auth storage (multiple possible keys)
-    const keysToRemove = Object.keys(localStorage).filter(key =>
-      key.startsWith('sb-') || key.includes('supabase')
+    // Clear ALL storage FIRST before Supabase tries to persist anything
+    const localKeysToRemove = Object.keys(localStorage).filter(key =>
+      key.startsWith('sb-') || key.includes('supabase') || key.includes('proves')
     )
-    keysToRemove.forEach(key => localStorage.removeItem(key))
+    localKeysToRemove.forEach(key => localStorage.removeItem(key))
 
-    // Also clear session storage
     const sessionKeysToRemove = Object.keys(sessionStorage).filter(key =>
       key.startsWith('sb-') || key.includes('supabase')
     )
     sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key))
 
+    // Now sign out from Supabase
+    await supabase.auth.signOut({ scope: 'global' })
+
     // Force clear the state
     setUser(null)
     setSession(null)
 
-    // Force page reload to ensure clean state
-    window.location.href = '/'
+    // Use replace to prevent back button from restoring session
+    window.location.replace('/')
   }
 
   const resetPassword = async (email: string) => {
