@@ -8,23 +8,20 @@ import {
   DialogTitle,
 } from "@/app/components/ui/dialog";
 import { Textarea } from "@/app/components/ui/textarea";
-import {
-  Loader2,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { RadialBarChart, RadialBar, PolarAngleAxis } from "recharts";
 import { useAgentOversight, ProposalWithCapability } from "../../hooks/useAgentOversight";
 import type { Database, AgentCapabilityType } from "../../types/database";
 
 type AgentCapability = Database['public']['Tables']['agent_capabilities']['Row'];
 
-// Trust level display
-function getTrustLevel(score: number): { label: string; color: string; description: string } {
-  if (score >= 0.9) return { label: "Trusted", color: "text-green-400", description: "Auto-approves most changes" };
-  if (score >= 0.7) return { label: "High", color: "text-blue-400", description: "Minimal review needed" };
-  if (score >= 0.5) return { label: "Medium", color: "text-yellow-400", description: "Standard review" };
-  if (score >= 0.3) return { label: "Low", color: "text-orange-400", description: "Careful review needed" };
-  return { label: "New", color: "text-slate-400", description: "All changes need review" };
+// Trust level display with hex colors for Recharts
+function getTrustLevel(score: number): { label: string; color: string; hexColor: string; description: string } {
+  if (score >= 0.9) return { label: "Trusted", color: "text-green-400", hexColor: "#22c55e", description: "Auto-approves most changes" };
+  if (score >= 0.7) return { label: "High", color: "text-blue-400", hexColor: "#3b82f6", description: "Minimal review needed" };
+  if (score >= 0.5) return { label: "Medium", color: "text-yellow-400", hexColor: "#eab308", description: "Standard review" };
+  if (score >= 0.3) return { label: "Low", color: "text-orange-400", hexColor: "#f97316", description: "Careful review needed" };
+  return { label: "New", color: "text-slate-400", hexColor: "#64748b", description: "All changes need review" };
 }
 
 // Capability type display
@@ -59,58 +56,95 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-// Trust score card for a capability
-function CapabilityCard({ capability }: { capability: AgentCapability }) {
-  const [expanded, setExpanded] = useState(false);
+// Capability Gauge - cockpit style dial
+function CapabilityGauge({ capability }: { capability: AgentCapability }) {
   const trust = getTrustLevel(capability.trust_score);
-  const successRate = capability.total_proposals > 0
-    ? ((capability.approved_count + capability.auto_approved_count) / capability.total_proposals * 100).toFixed(0)
-    : "N/A";
+  const trustPercent = Math.round(capability.trust_score * 100);
 
   return (
-    <div className="p-3 bg-slate-900/50 border border-slate-700 rounded">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-sm font-medium text-slate-200">{getCapabilityLabel(capability.capability_type)}</span>
-            <span className={`text-xs ${trust.color}`}>{trust.label}</span>
+    <div className="flex flex-col items-center p-2">
+      <div className="relative w-16 h-16">
+        <RadialBarChart
+          width={64}
+          height={64}
+          cx={32}
+          cy={32}
+          innerRadius={20}
+          outerRadius={30}
+          startAngle={90}
+          endAngle={-270}
+          data={[{ value: trustPercent, fill: trust.hexColor }]}
+        >
+          <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+          <RadialBar background={{ fill: "#334155" }} dataKey="value" cornerRadius={4} />
+        </RadialBarChart>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className={`text-xs font-bold ${trust.color}`}>{trustPercent}%</span>
+        </div>
+      </div>
+      <p className="text-xs text-slate-400 mt-1 text-center truncate max-w-[80px]">
+        {getCapabilityLabel(capability.capability_type).split(' ')[0]}
+      </p>
+    </div>
+  );
+}
+
+// Agent Cockpit Panel - shows all capabilities as gauges
+function AgentCockpit({ agentName, capabilities }: { agentName: string; capabilities: AgentCapability[] }) {
+  // Calculate overall agent trust (average of all capabilities)
+  const avgTrust = capabilities.length > 0
+    ? capabilities.reduce((sum, c) => sum + c.trust_score, 0) / capabilities.length
+    : 0;
+  const overallTrust = getTrustLevel(avgTrust);
+  const totalProposals = capabilities.reduce((sum, c) => sum + c.total_proposals, 0);
+  const totalApproved = capabilities.reduce((sum, c) => sum + c.approved_count + c.auto_approved_count, 0);
+
+  return (
+    <div className="bg-slate-900/50 border border-slate-700 rounded p-4">
+      {/* Agent Header */}
+      <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-700">
+        <div className="flex items-center gap-3">
+          {/* Overall trust gauge */}
+          <div className="relative w-14 h-14">
+            <RadialBarChart
+              width={56}
+              height={56}
+              cx={28}
+              cy={28}
+              innerRadius={18}
+              outerRadius={26}
+              startAngle={90}
+              endAngle={-270}
+              data={[{ value: Math.round(avgTrust * 100), fill: overallTrust.hexColor }]}
+            >
+              <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+              <RadialBar background={{ fill: "#334155" }} dataKey="value" cornerRadius={4} />
+            </RadialBarChart>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className={`text-xs font-bold ${overallTrust.color}`}>
+                {Math.round(avgTrust * 100)}
+              </span>
+            </div>
           </div>
-          <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden mb-1">
-            <div
-              className="h-full bg-slate-500 rounded-full"
-              style={{ width: `${capability.trust_score * 100}%` }}
-            />
-          </div>
-          <div className="text-xs text-slate-500">
-            {trust.description}
+          <div>
+            <h4 className="text-sm font-medium text-slate-200 capitalize">
+              {agentName.replace(/_/g, " ")}
+            </h4>
+            <p className={`text-xs ${overallTrust.color}`}>{overallTrust.label}</p>
           </div>
         </div>
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="text-slate-500 hover:text-slate-300 p-1"
-        >
-          {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </button>
+        <div className="text-right text-xs text-slate-500">
+          <div>{totalProposals} proposals</div>
+          <div className="text-green-400">{totalApproved} approved</div>
+        </div>
       </div>
 
-      {expanded && (
-        <div className="mt-3 pt-3 border-t border-slate-700 space-y-2 text-xs text-slate-400">
-          <div className="grid grid-cols-2 gap-2">
-            <div>Trust Score: <span className="font-mono text-slate-300">{(capability.trust_score * 100).toFixed(1)}%</span></div>
-            <div>Success Rate: <span className="font-mono text-slate-300">{successRate}%</span></div>
-            <div>Total Proposals: <span className="font-mono text-slate-300">{capability.total_proposals}</span></div>
-            <div>Approved: <span className="font-mono text-green-400">{capability.approved_count}</span></div>
-            <div>Auto-approved: <span className="font-mono text-blue-400">{capability.auto_approved_count}</span></div>
-            <div>Rejected: <span className="font-mono text-red-400">{capability.rejected_count}</span></div>
-            <div>Successful: <span className="font-mono text-purple-400">{capability.successful_implementations}</span></div>
-            <div>Failed: <span className="font-mono text-orange-400">{capability.failed_implementations}</span></div>
-          </div>
-          <div className="pt-2 text-slate-500">
-            Auto-approve threshold: {(capability.auto_approve_threshold * 100).toFixed(0)}% |
-            Review required: {capability.requires_review ? "Yes" : "No"}
-          </div>
-        </div>
-      )}
+      {/* Capability Gauges Grid */}
+      <div className="grid grid-cols-6 gap-1">
+        {capabilities.map((cap) => (
+          <CapabilityGauge key={cap.id} capability={cap} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -304,54 +338,150 @@ export function AgentOversight() {
     return true;
   });
 
+  // Calculate overall fleet stats
+  const overallTrust = capabilities.length > 0
+    ? capabilities.reduce((sum, c) => sum + c.trust_score, 0) / capabilities.length
+    : 0;
+  const overallTrustLevel = getTrustLevel(overallTrust);
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
         <h2 className="text-lg font-semibold text-slate-100">Agent Oversight</h2>
         <p className="text-sm text-slate-400">
-          Review agent self-improvement proposals and monitor trust levels
+          Monitor agent trust levels and review self-improvement proposals
         </p>
       </div>
 
-      {/* Stats cards */}
-      <div className="grid grid-cols-4 gap-4">
-        <div className="p-4 bg-slate-800/50 border border-slate-700 rounded">
-          <p className="text-2xl font-medium text-slate-100">{pendingProposals.length}</p>
-          <p className="text-sm text-slate-400">Pending Review</p>
+      {/* Fleet Overview Gauges */}
+      <div className="grid grid-cols-4 gap-6">
+        {/* Overall Fleet Trust */}
+        <div className="p-4 bg-slate-800/50 border border-slate-700 rounded flex items-center gap-4">
+          <div className="relative w-20 h-20">
+            <RadialBarChart
+              width={80}
+              height={80}
+              cx={40}
+              cy={40}
+              innerRadius={26}
+              outerRadius={38}
+              startAngle={90}
+              endAngle={-270}
+              data={[{ value: Math.round(overallTrust * 100), fill: overallTrustLevel.hexColor }]}
+            >
+              <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+              <RadialBar background={{ fill: "#334155" }} dataKey="value" cornerRadius={6} />
+            </RadialBarChart>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className={`text-lg font-bold ${overallTrustLevel.color}`}>
+                {Math.round(overallTrust * 100)}
+              </span>
+            </div>
+          </div>
+          <div>
+            <p className="text-sm text-slate-300">Fleet Trust</p>
+            <p className={`text-xs ${overallTrustLevel.color}`}>{overallTrustLevel.label}</p>
+          </div>
         </div>
-        <div className="p-4 bg-slate-800/50 border border-slate-700 rounded">
-          <p className="text-2xl font-medium text-slate-100">{autoApprovedProposals.length}</p>
-          <p className="text-sm text-slate-400">Auto-Approved</p>
+
+        {/* Pending Review */}
+        <div className="p-4 bg-slate-800/50 border border-slate-700 rounded flex items-center gap-4">
+          <div className="relative w-20 h-20">
+            <RadialBarChart
+              width={80}
+              height={80}
+              cx={40}
+              cy={40}
+              innerRadius={26}
+              outerRadius={38}
+              startAngle={90}
+              endAngle={-270}
+              data={[{ value: Math.min(pendingProposals.length * 20, 100), fill: pendingProposals.length > 0 ? "#f59e0b" : "#22c55e" }]}
+            >
+              <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+              <RadialBar background={{ fill: "#334155" }} dataKey="value" cornerRadius={6} />
+            </RadialBarChart>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className={`text-lg font-bold ${pendingProposals.length > 0 ? 'text-amber-400' : 'text-green-400'}`}>
+                {pendingProposals.length}
+              </span>
+            </div>
+          </div>
+          <div>
+            <p className="text-sm text-slate-300">Pending</p>
+            <p className="text-xs text-slate-500">{pendingProposals.length === 0 ? "All clear" : "Need review"}</p>
+          </div>
         </div>
-        <div className="p-4 bg-slate-800/50 border border-slate-700 rounded">
-          <p className="text-2xl font-medium text-slate-100">{capabilities.length}</p>
-          <p className="text-sm text-slate-400">Capabilities Tracked</p>
+
+        {/* Auto-Approved */}
+        <div className="p-4 bg-slate-800/50 border border-slate-700 rounded flex items-center gap-4">
+          <div className="relative w-20 h-20">
+            <RadialBarChart
+              width={80}
+              height={80}
+              cx={40}
+              cy={40}
+              innerRadius={26}
+              outerRadius={38}
+              startAngle={90}
+              endAngle={-270}
+              data={[{ value: Math.min(autoApprovedProposals.length * 10, 100), fill: "#3b82f6" }]}
+            >
+              <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+              <RadialBar background={{ fill: "#334155" }} dataKey="value" cornerRadius={6} />
+            </RadialBarChart>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-lg font-bold text-blue-400">{autoApprovedProposals.length}</span>
+            </div>
+          </div>
+          <div>
+            <p className="text-sm text-slate-300">Auto-Approved</p>
+            <p className="text-xs text-slate-500">High trust ops</p>
+          </div>
         </div>
-        <div className="p-4 bg-slate-800/50 border border-slate-700 rounded">
-          <p className="text-2xl font-medium text-slate-100">{agents.length}</p>
-          <p className="text-sm text-slate-400">Active Agents</p>
+
+        {/* Active Agents */}
+        <div className="p-4 bg-slate-800/50 border border-slate-700 rounded flex items-center gap-4">
+          <div className="relative w-20 h-20">
+            <RadialBarChart
+              width={80}
+              height={80}
+              cx={40}
+              cy={40}
+              innerRadius={26}
+              outerRadius={38}
+              startAngle={90}
+              endAngle={-270}
+              data={[{ value: Math.min(agents.length * 25, 100), fill: "#8b5cf6" }]}
+            >
+              <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+              <RadialBar background={{ fill: "#334155" }} dataKey="value" cornerRadius={6} />
+            </RadialBarChart>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-lg font-bold text-purple-400">{agents.length}</span>
+            </div>
+          </div>
+          <div>
+            <p className="text-sm text-slate-300">Agents</p>
+            <p className="text-xs text-slate-500">{capabilities.length} capabilities</p>
+          </div>
         </div>
       </div>
 
-      {/* Trust Dashboard by Agent */}
+      {/* Agent Cockpits */}
       <div className="bg-slate-800/50 border border-slate-700 rounded p-4">
-        <h3 className="text-sm font-medium text-slate-200 mb-4">Trust Levels by Agent</h3>
+        <h3 className="text-sm font-medium text-slate-200 mb-4">Agent Trust Cockpit</h3>
         {agents.length === 0 ? (
           <p className="text-slate-400 text-sm">No agents registered yet</p>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {agents.map((agentName) => (
-              <div key={agentName}>
-                <h4 className="text-sm font-medium text-slate-300 mb-3 capitalize">
-                  {agentName.replace("_", " ")}
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {capabilitiesByAgent[agentName].map((cap) => (
-                    <CapabilityCard key={cap.id} capability={cap} />
-                  ))}
-                </div>
-              </div>
+              <AgentCockpit
+                key={agentName}
+                agentName={agentName}
+                capabilities={capabilitiesByAgent[agentName]}
+              />
             ))}
           </div>
         )}
