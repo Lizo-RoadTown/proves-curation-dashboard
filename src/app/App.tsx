@@ -193,7 +193,7 @@ export default function App() {
           onNavigate={handleNavigate}
           userRole={userRole}
         />
-        <main className="flex-1 overflow-hidden bg-[#0f172a] h-[calc(100vh-52px)]">
+        <main className="flex-1 overflow-auto bg-[#0f172a] h-[calc(100vh-52px)]">
           {currentSurface === "library" && <LibraryView />}
           {currentSurface === "admin" && <AdminView />}
           {currentSurface === "mission-control" && <MissionControlView />}

@@ -158,7 +158,7 @@ export function LibraryView() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-[#0f172a]">
+    <div className="h-full min-h-full flex flex-col bg-[#0f172a]">
       {/* Header */}
       <div className="p-6 border-b border-[#334155]">
         <h1 className="text-xl font-semibold text-[#e2e8f0] mb-1">Knowledge Library</h1>

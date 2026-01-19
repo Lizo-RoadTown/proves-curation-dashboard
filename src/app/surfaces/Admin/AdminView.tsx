@@ -185,7 +185,7 @@ export function AdminView() {
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-slate-900">
+    <div className="h-full min-h-full overflow-y-auto bg-slate-900">
       {/* Dashboard is the main view */}
       {activeSection === "dashboard" && (
         <TeamDashboard

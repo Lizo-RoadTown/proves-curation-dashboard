@@ -88,7 +88,7 @@ export function TeamDashboard({
   const currentOrg = organizations.find(o => o.org_id === currentOrgId);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 min-h-full">
       {/* Header with Organization Selector */}
       <div className="flex items-center justify-between">
         <div>
