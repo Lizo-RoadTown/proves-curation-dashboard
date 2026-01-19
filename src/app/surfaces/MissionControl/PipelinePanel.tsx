@@ -14,7 +14,7 @@
  * Outbound: Knowledge Graph → Consumers (center to right)
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 
 interface UniversityPipeline {
@@ -60,6 +60,7 @@ interface PipelineStream {
 
 export function PipelinePanel({ pipelines = DEFAULT_PIPELINES }: PipelinePanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isReady, setIsReady] = useState(false);
   const sceneRef = useRef<{
     scene: THREE.Scene;
     camera: THREE.PerspectiveCamera;
@@ -69,8 +70,30 @@ export function PipelinePanel({ pipelines = DEFAULT_PIPELINES }: PipelinePanelPr
   } | null>(null);
   const animationRef = useRef<number>(0);
 
+  // Wait for container to have dimensions
   useEffect(() => {
     if (!containerRef.current) return;
+
+    const checkDimensions = () => {
+      if (containerRef.current && containerRef.current.clientWidth > 0 && containerRef.current.clientHeight > 0) {
+        setIsReady(true);
+        return true;
+      }
+      return false;
+    };
+
+    if (checkDimensions()) return;
+
+    const interval = setInterval(() => {
+      if (checkDimensions()) clearInterval(interval);
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Initialize Three.js scene when ready
+  useEffect(() => {
+    if (!isReady || !containerRef.current) return;
 
     const container = containerRef.current;
     const width = container.clientWidth;
@@ -160,30 +183,7 @@ export function PipelinePanel({ pipelines = DEFAULT_PIPELINES }: PipelinePanelPr
 
     sceneRef.current = { scene, camera, renderer, streams, centralNode };
 
-    // Handle resize
-    const handleResize = () => {
-      if (!sceneRef.current) return;
-      const w = container.clientWidth;
-      const h = container.clientHeight;
-      sceneRef.current.camera.aspect = w / h;
-      sceneRef.current.camera.updateProjectionMatrix();
-      sceneRef.current.renderer.setSize(w, h);
-    };
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      cancelAnimationFrame(animationRef.current);
-      renderer.dispose();
-      container.removeChild(renderer.domElement);
-    };
-  }, [pipelines]);
-
-  // Animation loop
-  useEffect(() => {
-    if (!sceneRef.current) return;
-
-    const { scene, camera, renderer, streams, centralNode } = sceneRef.current;
+    // Animation loop
     let lastTime = performance.now();
     let time = 0;
 
@@ -199,21 +199,16 @@ export function PipelinePanel({ pipelines = DEFAULT_PIPELINES }: PipelinePanelPr
 
       // Update each stream
       streams.forEach(stream => {
-        // Speed based on rate and latency
         const rateFactor = Math.min(2, stream.rate);
         const latFactor = Math.max(0.3, 800 / Math.max(100, stream.latencyMs));
         const speed = 0.15 * rateFactor * latFactor;
-
-        // Status affects speed
         const statusMul = stream.status === 'degraded' ? 0.4 : 1.0;
         const finalSpeed = speed * statusMul;
 
-        // Update particle positions
         const positions = stream.particles.geometry.attributes.position as THREE.BufferAttribute;
         const posArray = positions.array as Float32Array;
 
         for (let i = 0; i < stream.particleSeeds.length; i++) {
-          // Advance along curve
           stream.particleSeeds[i] = (stream.particleSeeds[i] + dt * finalSpeed) % 1;
           const t = stream.particleSeeds[i];
           const pos = stream.curve.getPointAt(t);
@@ -225,11 +220,9 @@ export function PipelinePanel({ pipelines = DEFAULT_PIPELINES }: PipelinePanelPr
 
         positions.needsUpdate = true;
 
-        // Tube opacity based on status
         const tubeMat = stream.tube.material as THREE.MeshBasicMaterial;
         tubeMat.opacity = stream.status === 'degraded' ? 0.03 : 0.06;
 
-        // Particle opacity based on status
         const partMat = stream.particles.material as THREE.PointsMaterial;
         partMat.opacity = stream.status === 'degraded' ? 0.4 : 0.8;
       });
@@ -240,10 +233,27 @@ export function PipelinePanel({ pipelines = DEFAULT_PIPELINES }: PipelinePanelPr
 
     animate();
 
-    return () => {
-      cancelAnimationFrame(animationRef.current);
+    // Handle resize
+    const handleResize = () => {
+      if (!sceneRef.current || !containerRef.current) return;
+      const w = containerRef.current.clientWidth;
+      const h = containerRef.current.clientHeight;
+      sceneRef.current.camera.aspect = w / h;
+      sceneRef.current.camera.updateProjectionMatrix();
+      sceneRef.current.renderer.setSize(w, h);
     };
-  }, []);
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(animationRef.current);
+      renderer.dispose();
+      if (container.contains(renderer.domElement)) {
+        container.removeChild(renderer.domElement);
+      }
+      sceneRef.current = null;
+    };
+  }, [isReady, pipelines]);
 
   return (
     <div className="h-full w-full relative">
@@ -274,7 +284,6 @@ function createStream(
   direction: 'inbound' | 'outbound',
   particleCount: number
 ): PipelineStream {
-  // Tube (faint path)
   const thickness = Math.min(1.5, 0.3 + state.rate * 0.5);
   const tubeGeometry = new THREE.TubeGeometry(curve, 32, thickness, 6, false);
   const tubeMaterial = new THREE.MeshBasicMaterial({
@@ -286,7 +295,6 @@ function createStream(
   const tube = new THREE.Mesh(tubeGeometry, tubeMaterial);
   scene.add(tube);
 
-  // Particles
   const particleGeometry = new THREE.BufferGeometry();
   const positions = new Float32Array(particleCount * 3);
   const colors = new Float32Array(particleCount * 3);
@@ -333,7 +341,6 @@ function createStream(
   };
 }
 
-// Re-export with simpler interface for backwards compatibility
 export interface PipelineState {
   rate: number;
   latencyMs: number;

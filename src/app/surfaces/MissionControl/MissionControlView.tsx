@@ -1,51 +1,38 @@
 /**
  * MissionControlView - Shared Live Awareness Room
  *
- * A read-only, shared, live space for situational awareness across all teams.
- * Not a workspace - a place to watch the system breathe.
+ * Layout:
+ * ┌──────────┬─────────────────────────────────┬──────────┐
+ * │ Sources  │                                 │ Sources  │
+ * │   IN     │      Knowledge Graph            │   OUT    │
+ * │ (pipes)  │                                 │ (pipes)  │
+ * ├──────────┴─────────────────────────────────┴──────────┤
+ * │             Agents (row of 6 colored orbs)            │
+ * └───────────────────────────────────────────────────────┘
  *
- * Layout: 4-pane grid
- * ┌─────────────────────────────────────┬──────────────┐
- * │                                     │  Pipelines   │
- * │   Knowledge Graph + Heat Overlay    │  (5 unis)    │
- * │         (largest pane)              ├──────────────┤
- * │                                     │   Agents     │
- * │                                     │  (6 types)   │
- * └─────────────────────────────────────┴──────────────┘
- *
- * Each panel is its own rendering context:
- * - Graph3D: Knowledge graph with heat overlay
- * - PipelinePanel: 5 university pipelines (3D streams)
- * - AgentAvatarPanel: 6 agent classes (3D motion-encoded)
- *
- * Rules:
- * - No editing, no forms
- * - No personalization (same view for everyone)
- * - Ambient awareness: slow animations, subtle pulses
- * - All data from validated graph only (not tenant staging)
+ * - Left: Inbound pipelines (5 universities feeding data in)
+ * - Center: Knowledge graph (the brain)
+ * - Right: Outbound pipelines (data flowing out)
+ * - Bottom: 6 agent orbs showing health through motion
  */
 
 import { useState, useEffect } from "react";
 import { Graph3D } from "@/app/components/Graph3D";
-import { PipelinePanel } from "./PipelinePanel";
-import { AgentAvatarPanel } from "./AgentAvatarPanel";
+import { PipelineColumn } from "./PipelineColumn";
+import { AgentOrbs } from "./AgentOrbs";
 
 export function MissionControlView() {
   const [lastUpdate, setLastUpdate] = useState(new Date());
 
-  // Update timestamp every second
   useEffect(() => {
     const interval = setInterval(() => setLastUpdate(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // These would come from Supabase realtime subscriptions
-  // For now, using defaults defined in the panel components
-
   return (
     <div className="h-full bg-[#0f172a] overflow-hidden flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#334155]">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-[#334155]">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
@@ -55,31 +42,38 @@ export function MissionControlView() {
             <span className="text-sm font-medium text-[#e2e8f0]">MISSION CONTROL</span>
           </div>
           <span className="text-xs text-[#64748b]">
-            Last update: {lastUpdate.toLocaleTimeString()}
+            {lastUpdate.toLocaleTimeString()}
           </span>
         </div>
       </div>
 
-      {/* 4-Pane Grid */}
-      <div className="flex-1 grid grid-cols-[1fr_360px] grid-rows-2 gap-1 p-1">
-        {/* Knowledge Graph - spans both rows on left */}
-        <div className="row-span-2 bg-[#0f172a] rounded-lg overflow-hidden border border-[#334155]">
+      {/* Main content: Pipes | Graph | Pipes */}
+      <div className="flex-1 flex min-h-0">
+        {/* Left: Sources IN */}
+        <div className="w-20 border-r border-[#334155] flex flex-col">
+          <div className="text-[9px] text-center text-[#64748b] py-1 border-b border-[#334155]">IN</div>
+          <PipelineColumn direction="in" />
+        </div>
+
+        {/* Center: Knowledge Graph */}
+        <div className="flex-1 min-w-0">
           <Graph3D
-            height={window.innerHeight - 70}
+            height={window.innerHeight - 150}
             className="w-full h-full border-0 rounded-none"
-            enableHeatOverlay={true}
+            enableHeatOverlay={false}
           />
         </div>
 
-        {/* Pipeline Panel - top right (5 universities) */}
-        <div className="bg-[#0f172a] rounded-lg overflow-hidden border border-[#334155]">
-          <PipelinePanel pipelines={[]} />
+        {/* Right: Sources OUT */}
+        <div className="w-20 border-l border-[#334155] flex flex-col">
+          <div className="text-[9px] text-center text-[#64748b] py-1 border-b border-[#334155]">OUT</div>
+          <PipelineColumn direction="out" />
         </div>
+      </div>
 
-        {/* Agent Avatar Panel - bottom right (6 agent classes) */}
-        <div className="bg-[#0f172a] rounded-lg overflow-hidden border border-[#334155]">
-          <AgentAvatarPanel agents={[]} />
-        </div>
+      {/* Bottom: Agent Orbs */}
+      <div className="h-24 border-t border-[#334155]">
+        <AgentOrbs />
       </div>
     </div>
   );
