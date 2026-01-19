@@ -85,11 +85,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     // Use global scope to sign out from all tabs/devices
     await supabase.auth.signOut({ scope: 'global' })
-    // Clear any lingering auth storage
-    localStorage.removeItem('sb-guigtpwxlqwueylbbcpx-auth-token')
+
+    // Clear ALL Supabase auth storage (multiple possible keys)
+    const keysToRemove = Object.keys(localStorage).filter(key =>
+      key.startsWith('sb-') || key.includes('supabase')
+    )
+    keysToRemove.forEach(key => localStorage.removeItem(key))
+
+    // Also clear session storage
+    const sessionKeysToRemove = Object.keys(sessionStorage).filter(key =>
+      key.startsWith('sb-') || key.includes('supabase')
+    )
+    sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key))
+
     // Force clear the state
     setUser(null)
     setSession(null)
+
+    // Force page reload to ensure clean state
+    window.location.href = '/'
   }
 
   const resetPassword = async (email: string) => {
