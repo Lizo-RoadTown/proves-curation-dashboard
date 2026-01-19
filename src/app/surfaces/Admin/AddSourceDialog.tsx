@@ -44,6 +44,16 @@ function DiscordIcon({ className }: { className?: string }) {
   );
 }
 
+function WebsiteIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
+  );
+}
+
 // =============================================================================
 // SOURCE TYPE OPTIONS
 // =============================================================================
@@ -92,6 +102,13 @@ const SOURCE_TYPES: SourceTypeOption[] = [
     icon: GoogleDriveIcon,
     color: 'bg-yellow-500',
   },
+  {
+    type: 'url_list',
+    label: 'Website',
+    description: 'Crawl documentation from a website',
+    icon: WebsiteIcon,
+    color: 'bg-blue-600',
+  },
 ];
 
 // =============================================================================
@@ -121,6 +138,9 @@ export function AddSourceDialog({ open, onClose, onSubmit }: AddSourceDialogProp
     notionRootPageId: '',
     // Google Drive
     gdriveLink: '',
+    // Website
+    websiteUrl: '',
+    websiteMaxPages: '50',
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -183,6 +203,19 @@ export function AddSourceDialog({ open, onClose, onSubmit }: AddSourceDialogProp
           if (!folderId) throw new Error('Could not extract folder ID from link');
           source_config = { folder_id: folderId };
           break;
+        case 'url_list':
+          if (!formData.websiteUrl) throw new Error('Website URL is required');
+          // Normalize URL
+          let url = formData.websiteUrl.trim();
+          if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            url = 'https://' + url;
+          }
+          source_config = {
+            urls: [url],
+            recursive: true,
+            max_depth: parseInt(formData.websiteMaxPages) || 50,
+          };
+          break;
       }
 
       const form: CreateSourceForm = {
@@ -207,6 +240,8 @@ export function AddSourceDialog({ open, onClose, onSubmit }: AddSourceDialogProp
           notionWorkspaceId: '',
           notionRootPageId: '',
           gdriveLink: '',
+          websiteUrl: '',
+          websiteMaxPages: '50',
         });
         onClose();
       }
@@ -418,6 +453,42 @@ export function AddSourceDialog({ open, onClose, onSubmit }: AddSourceDialogProp
                 </div>
               )}
 
+              {(selectedType === 'url_list') && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Website URL *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.websiteUrl}
+                      onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })}
+                      placeholder="e.g., https://docs.example.com or fprime.jpl.nasa.gov"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      The smart crawler will discover documentation pages
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Max Pages to Crawl
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.websiteMaxPages}
+                      onChange={(e) => setFormData({ ...formData, websiteMaxPages: e.target.value })}
+                      min="1"
+                      max="500"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Limit crawl depth (default: 50 pages)
+                    </p>
+                  </div>
+                </>
+              )}
+
               {/* Description (always shown) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -504,6 +575,18 @@ function getDefaultName(type: TeamSourceType, formData: any): string {
       return 'Notion Workspace';
     case 'gdrive_folder':
       return 'Google Drive Folder';
+    case 'url_list':
+      // Extract domain from URL for default name
+      try {
+        const url = formData.websiteUrl?.trim();
+        if (url) {
+          const urlObj = new URL(url.startsWith('http') ? url : 'https://' + url);
+          return urlObj.hostname.replace('www.', '');
+        }
+      } catch {
+        // ignore
+      }
+      return 'Website';
     default:
       return 'New Source';
   }
