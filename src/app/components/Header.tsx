@@ -49,6 +49,8 @@ export function Header({
   onGraphPinToggle,
   showGraphControls = true,
 }: HeaderProps) {
+  // Debug logging
+  console.log('[Header] teams:', teams, 'currentTeam:', currentTeam);
   return (
     <header className="border-b border-[#334155] bg-[#0f172a] px-6 py-3">
       <div className="flex items-center justify-between">

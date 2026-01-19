@@ -22,6 +22,7 @@ export interface UserOrganization {
   org_color: string
   user_role: 'admin' | 'lead' | 'engineer' | 'researcher' | 'member'
   is_primary: boolean
+  is_active_org?: boolean  // True for the currently active organization
 }
 
 export interface OrganizationStats {
@@ -72,6 +73,7 @@ export function useCurrentOrganization(): UseCurrentOrganizationResult {
    */
   const fetchOrganizations = useCallback(async () => {
     if (!user?.id) {
+      console.log('[useCurrentOrganization] No user ID, skipping fetch')
       setOrganizations([])
       setCurrentOrg(null)
       setLoading(false)
@@ -82,6 +84,7 @@ export function useCurrentOrganization(): UseCurrentOrganizationResult {
       setLoading(true)
       setError(null)
 
+      console.log('[useCurrentOrganization] Fetching orgs for user:', user.id)
       const { data, error: rpcError } = await supabase.rpc('get_user_organizations', {
         p_user_id: user.id
       })
@@ -89,16 +92,18 @@ export function useCurrentOrganization(): UseCurrentOrganizationResult {
       if (rpcError) throw rpcError
 
       const orgs = (data || []) as UserOrganization[]
+      console.log('[useCurrentOrganization] Fetched organizations:', orgs.length, orgs.map(o => o.org_name))
       setOrganizations(orgs)
 
-      // Set primary org as current, or first if no primary
-      const primary = orgs.find(o => o.is_primary) || orgs[0] || null
-      setCurrentOrg(primary)
+      // Set active org as current, or primary, or first
+      const activeOrg = orgs.find(o => o.is_active_org) || orgs.find(o => o.is_primary) || orgs[0] || null
+      console.log('[useCurrentOrganization] Active org:', activeOrg?.org_name || 'none')
+      setCurrentOrg(activeOrg)
 
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch organizations'
       setError(message)
-      console.error('Error fetching organizations:', err)
+      console.error('[useCurrentOrganization] Error fetching organizations:', err)
     } finally {
       setLoading(false)
     }
@@ -135,14 +140,42 @@ export function useCurrentOrganization(): UseCurrentOrganizationResult {
   }, [currentOrg?.org_id])
 
   /**
-   * Select a different organization
+   * Select a different organization - calls activate_organization RPC
    */
-  const selectOrganization = useCallback((orgId: string) => {
+  const selectOrganization = useCallback(async (orgId: string) => {
     const org = organizations.find(o => o.org_id === orgId)
-    if (org) {
+    if (!org) {
+      console.error('[useCurrentOrganization] Org not found:', orgId)
+      return
+    }
+
+    try {
+      console.log('[useCurrentOrganization] Activating organization:', org.org_name)
+
+      // Call the RPC to set active org (validates membership)
+      const { data, error } = await supabase.rpc('activate_organization', {
+        p_org_id: orgId
+      })
+
+      if (error) {
+        console.error('[useCurrentOrganization] Failed to activate org:', error)
+        // Still update local state even if RPC fails (for dev mode)
+        setCurrentOrg(org)
+        return
+      }
+
+      console.log('[useCurrentOrganization] Activated:', data)
+      setCurrentOrg(org)
+
+      // Refresh organizations to update is_active_org flags
+      fetchOrganizations()
+
+    } catch (err) {
+      console.error('[useCurrentOrganization] Error activating org:', err)
+      // Fallback to local update
       setCurrentOrg(org)
     }
-  }, [organizations])
+  }, [organizations, fetchOrganizations])
 
   /**
    * Refresh stats for current org

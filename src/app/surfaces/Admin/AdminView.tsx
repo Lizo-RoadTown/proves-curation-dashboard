@@ -106,38 +106,42 @@ export function AdminView() {
 
     if (viewMode === "simple" && selectedExtraction) {
       return (
-        <EngineerReview
-          extraction={selectedExtraction}
-          onApprove={async (notes, captureAnswers) => {
-            await recordDecision({
-              p_extraction_id: selectedExtractionId,
-              p_decision: "accept",
-              p_reviewer_id: "dashboard_user",
-              p_decision_reason: notes || "Approved via engineer review",
-            });
-            handleBackFromDetail();
-          }}
-          onReject={async (reason, category) => {
-            await recordDecision({
-              p_extraction_id: selectedExtractionId,
-              p_decision: "reject",
-              p_reviewer_id: "dashboard_user",
-              p_rejection_category: category as RejectionCategory,
-              p_decision_reason: reason,
-            });
-            handleBackFromDetail();
-          }}
-          onBack={handleBackFromDetail}
-        />
+        <div className="h-full overflow-y-auto">
+          <EngineerReview
+            extraction={selectedExtraction}
+            onApprove={async (notes, captureAnswers) => {
+              await recordDecision({
+                p_extraction_id: selectedExtractionId,
+                p_decision: "accept",
+                p_reviewer_id: "dashboard_user",
+                p_decision_reason: notes || "Approved via engineer review",
+              });
+              handleBackFromDetail();
+            }}
+            onReject={async (reason, category) => {
+              await recordDecision({
+                p_extraction_id: selectedExtractionId,
+                p_decision: "reject",
+                p_reviewer_id: "dashboard_user",
+                p_rejection_category: category as RejectionCategory,
+                p_decision_reason: reason,
+              });
+              handleBackFromDetail();
+            }}
+            onBack={handleBackFromDetail}
+          />
+        </div>
       );
     }
 
     return (
-      <ExtractionDetail
-        extractionId={selectedExtractionId}
-        onBack={handleBackFromDetail}
-        reviewerId="dashboard_user"
-      />
+      <div className="h-full overflow-y-auto">
+        <ExtractionDetail
+          extractionId={selectedExtractionId}
+          onBack={handleBackFromDetail}
+          reviewerId="dashboard_user"
+        />
+      </div>
     );
   }
 

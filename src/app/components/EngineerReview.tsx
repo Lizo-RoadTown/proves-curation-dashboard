@@ -204,7 +204,7 @@ export function EngineerReview({
   const allAccuracyAnswered = Object.values(accuracyChecks).every(v => v !== null);
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6 bg-[#0f172a] min-h-screen">
+    <div className="max-w-4xl mx-auto p-6 space-y-6 bg-[#0f172a] pb-20">
       {/* Header */}
       <div className="flex items-center justify-between">
         <Button variant="ghost" onClick={onBack} className="text-[#cbd5e1] hover:text-[#e2e8f0] hover:bg-[#1e293b]">

@@ -16,6 +16,7 @@ import { Header } from "./components/Header";
 import { Navigation } from "./components/Navigation";
 import { LoginPage } from "./components/auth/LoginPage";
 import { SignupPage } from "./components/auth/SignupPage";
+import { OrganizationPicker } from "./components/auth/OrganizationPicker";
 import { Loader2 } from "lucide-react";
 
 // 3-surface architecture: Library, Admin, Mission Control
@@ -41,6 +42,20 @@ export default function App() {
   } = useCurrentOrganization();
   const [currentSurface, setCurrentSurface] = useState<Surface>("mission-control");
   const [authView, setAuthView] = useState<AuthView>("login");
+  const [showOrgPicker, setShowOrgPicker] = useState(false);
+
+  // Check if user needs to pick their organization (first login)
+  useEffect(() => {
+    if (user && !orgLoading && organizations.length > 0) {
+      const hasSelectedOrg = localStorage.getItem('proves_org_selected');
+      const hasPrimaryOrg = organizations.some(o => o.is_primary);
+
+      // Show picker if user hasn't selected an org and doesn't have a primary
+      if (!hasSelectedOrg && !hasPrimaryOrg) {
+        setShowOrgPicker(true);
+      }
+    }
+  }, [user, orgLoading, organizations]);
 
   // Graph visibility state
   const [graphVisible, setGraphVisible] = useState(false);
@@ -86,6 +101,19 @@ export default function App() {
     return <LoginPage onSwitchToSignup={() => setAuthView("signup")} />;
   }
 
+  // Show organization picker for first login
+  if (showOrgPicker && user) {
+    return (
+      <OrganizationPicker
+        userId={user.id}
+        onComplete={(orgId) => {
+          selectOrganization(orgId);
+          setShowOrgPicker(false);
+        }}
+      />
+    );
+  }
+
   // User is authenticated (or dev mode) - show main app
   // Build teams list from real organizations
   const teams = organizations.length > 0
@@ -102,10 +130,15 @@ export default function App() {
   };
 
   const handleTeamChange = (teamName: string) => {
+    console.log('[App] handleTeamChange called with:', teamName);
+    console.log('[App] Available organizations:', organizations.map(o => o.org_name));
     // Find the org by name and select it
     const org = organizations.find(o => o.org_name === teamName);
     if (org) {
+      console.log('[App] Found org, selecting:', org.org_id, org.org_name);
       selectOrganization(org.org_id);
+    } else {
+      console.log('[App] Org not found in organizations array');
     }
   };
 
