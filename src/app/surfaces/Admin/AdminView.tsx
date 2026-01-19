@@ -21,10 +21,11 @@ import { EngineerReview } from "@/app/components/EngineerReview";
 import { AgentOversight } from "@/app/components/AgentOversight";
 import { SourcesSection } from "./SourcesSection";
 import { IngestionSection } from "./IngestionSection";
+import { DiscoverySection } from "./DiscoverySection";
 import { TeamDashboard } from "./TeamDashboard";
 import type { ReviewExtractionDTO, RejectionCategory } from "@/types/review";
 
-type AdminSection = "dashboard" | "review" | "sources" | "ingestion" | "health" | "policy" | "agents";
+type AdminSection = "dashboard" | "review" | "sources" | "ingestion" | "health" | "policy" | "agents" | "discovery";
 
 export function AdminView() {
   const [activeSection, setActiveSection] = useState<AdminSection>("dashboard");
@@ -203,6 +204,7 @@ export function AdminView() {
           onNavigateToIngestion={() => setActiveSection("ingestion")}
           onNavigateToPolicy={() => setActiveSection("policy")}
           onNavigateToAgents={() => setActiveSection("agents")}
+          onNavigateToDiscovery={() => setActiveSection("discovery")}
         />
       )}
 
@@ -449,6 +451,13 @@ export function AdminView() {
         <div className="p-6">
           {renderBackButton()}
           <AgentOversight />
+        </div>
+      )}
+
+      {activeSection === "discovery" && (
+        <div className="p-6">
+          {renderBackButton()}
+          <DiscoverySection />
         </div>
       )}
     </div>

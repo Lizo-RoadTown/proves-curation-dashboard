@@ -44,6 +44,7 @@ interface TeamDashboardProps {
   onNavigateToIngestion?: () => void;
   onNavigateToPolicy?: () => void;
   onNavigateToAgents?: () => void;
+  onNavigateToDiscovery?: () => void;
 }
 
 export function TeamDashboard({
@@ -61,6 +62,7 @@ export function TeamDashboard({
   onNavigateToIngestion,
   onNavigateToPolicy,
   onNavigateToAgents,
+  onNavigateToDiscovery,
 }: TeamDashboardProps) {
   // Use real stats from Supabase if available, otherwise fallback
   const stats = {
@@ -250,9 +252,10 @@ export function TeamDashboard({
             </button>
           </div>
 
-          {sourcesLoading ? (
-            <div className="flex-1 flex items-center justify-center">
-              <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
+          {sourcesLoading && teamSources.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center gap-2">
+              <div className="w-6 h-6 border-2 border-slate-600 border-t-slate-400 rounded-full animate-spin" />
+              <p className="text-xs text-slate-500">Loading sources...</p>
             </div>
           ) : teamSources.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center">
@@ -436,6 +439,15 @@ export function TeamDashboard({
             >
               <p className="text-base font-medium text-slate-200">Policy</p>
               <p className="text-sm text-slate-500 mt-1">Auto-approval rules</p>
+            </button>
+          )}
+          {onNavigateToDiscovery && (
+            <button
+              onClick={onNavigateToDiscovery}
+              className="p-6 bg-slate-900/50 border border-slate-700 rounded hover:bg-slate-900 hover:border-slate-600 transition-colors text-left"
+            >
+              <p className="text-base font-medium text-slate-200">URL Discovery</p>
+              <p className="text-sm text-slate-500 mt-1">Smart crawler for docs</p>
             </button>
           )}
         </div>

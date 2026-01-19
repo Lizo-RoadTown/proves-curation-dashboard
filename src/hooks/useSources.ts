@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { processJob, checkApiHealth } from '../lib/extractionApi';
 import type {
   TeamSource,
   CrawlJob,
@@ -55,10 +56,14 @@ export function useSources(): UseSourcesResult {
 
   /**
    * Fetch all team sources
+   * Only shows loading spinner on initial load (when no sources exist yet)
    */
   const fetchSources = useCallback(async () => {
     try {
-      setLoading(true);
+      // Only show loading on initial fetch, not refreshes
+      if (sources.length === 0) {
+        setLoading(true);
+      }
       setError(null);
 
       const { data, error: fetchError } = await supabase
@@ -76,7 +81,7 @@ export function useSources(): UseSourcesResult {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [sources.length]);
 
   /**
    * Fetch recent crawl jobs
@@ -156,8 +161,8 @@ export function useSources(): UseSourcesResult {
 
         if (createError) throw createError;
 
-        // Update local state
-        setSources((prev) => [data, ...prev]);
+        // Real-time subscription will handle updating the UI
+        // No need to manually update local state
 
         return data;
       } catch (err) {
@@ -185,10 +190,8 @@ export function useSources(): UseSourcesResult {
 
         if (updateError) throw updateError;
 
-        // Update local state
-        setSources((prev) =>
-          prev.map((s) => (s.id === id ? { ...s, ...updates } : s))
-        );
+        // Real-time subscription will handle updating the UI
+        // No need to manually update local state
 
         return true;
       } catch (err) {
@@ -215,8 +218,8 @@ export function useSources(): UseSourcesResult {
 
       if (deleteError) throw deleteError;
 
-      // Update local state
-      setSources((prev) => prev.filter((s) => s.id !== id));
+      // Real-time subscription will handle updating the UI
+      // No need to manually update local state
 
       return true;
     } catch (err) {
@@ -229,13 +232,17 @@ export function useSources(): UseSourcesResult {
 
   /**
    * Trigger a crawl for a source
+   *
+   * 1. Creates a job record in Supabase via trigger_crawl RPC
+   * 2. Calls the extraction API to actually process the job
    */
   const triggerCrawl = useCallback(
     async (sourceId: string): Promise<string | null> => {
       try {
         setError(null);
 
-        const { data, error: triggerError } = await supabase.rpc('trigger_crawl', {
+        // Step 1: Create the job in Supabase
+        const { data: jobId, error: triggerError } = await supabase.rpc('trigger_crawl', {
           p_source_id: sourceId,
           p_triggered_by: 'manual',
         });
@@ -245,7 +252,24 @@ export function useSources(): UseSourcesResult {
         // Refresh jobs list
         await fetchRecentJobs();
 
-        return data;
+        // Step 2: Call extraction API to process the job
+        try {
+          const apiHealth = await checkApiHealth();
+          if (apiHealth) {
+            // API is available, trigger extraction
+            console.log('[useSources] Extraction API available, triggering job processing');
+            const result = await processJob(jobId);
+            console.log('[useSources] Extraction started:', result);
+          } else {
+            // API not available - job will be processed by worker polling
+            console.log('[useSources] Extraction API not available, job queued for worker');
+          }
+        } catch (apiError) {
+          // API call failed - job stays in pending state for worker
+          console.warn('[useSources] Extraction API call failed, job queued:', apiError);
+        }
+
+        return jobId;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to trigger crawl';
         setError(message);
@@ -271,7 +295,49 @@ export function useSources(): UseSourcesResult {
     fetchSources();
     fetchRecentJobs();
     fetchStats();
-  }, [fetchSources, fetchRecentJobs, fetchStats]);
+  }, []);  // Only run once on mount
+
+  // Real-time subscription for team_sources changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('team_sources_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',  // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'team_sources',
+        },
+        (payload) => {
+          console.log('[useSources] Real-time update:', payload.eventType);
+
+          if (payload.eventType === 'INSERT') {
+            // Add new source to the list
+            setSources((prev) => [payload.new as TeamSource, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            // Update existing source
+            setSources((prev) =>
+              prev.map((s) =>
+                s.id === (payload.new as TeamSource).id
+                  ? (payload.new as TeamSource)
+                  : s
+              )
+            );
+          } else if (payload.eventType === 'DELETE') {
+            // Remove deleted source
+            setSources((prev) =>
+              prev.filter((s) => s.id !== (payload.old as TeamSource).id)
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   return {
     sources,
