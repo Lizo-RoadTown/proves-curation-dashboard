@@ -22,11 +22,12 @@ import { Loader2 } from "lucide-react";
 // 3-surface architecture: Library, Admin, Mission Control
 import { LibraryView, AdminView, MissionControlView } from "./surfaces";
 import { MobileReview } from "./components/MobileReview";
+import { AppChoicePage } from "./components/auth/AppChoicePage";
 
 // Surface types
 type Surface = "library" | "admin" | "mission-control";
 type AuthView = "login" | "signup";
-type AppMode = "dashboard" | "mobile-review";
+type AppMode = "choosing" | "dashboard" | "mobile-review";
 
 // DEV MODE: Skip auth for local development
 // Set to false to test real auth flow even in dev
@@ -46,7 +47,7 @@ export default function App() {
   const [currentSurface, setCurrentSurface] = useState<Surface>("mission-control");
   const [authView, setAuthView] = useState<AuthView>("login");
   const [showOrgPicker, setShowOrgPicker] = useState(false);
-  const [appMode, setAppMode] = useState<AppMode>("dashboard");
+  const [appMode, setAppMode] = useState<AppMode>("choosing");
 
   // Check if user needs to pick their organization (first login)
   useEffect(() => {
@@ -102,10 +103,17 @@ export default function App() {
     if (authView === "signup") {
       return <SignupPage onSwitchToLogin={() => setAuthView("login")} />;
     }
+    return <LoginPage onSwitchToSignup={() => setAuthView("signup")} />;
+  }
+
+  // Show app choice page after authentication (before org picker or dashboard)
+  if (appMode === "choosing" && user) {
+    const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0];
     return (
-      <LoginPage
-        onSwitchToSignup={() => setAuthView("signup")}
-        onMobileReviewMode={() => setAppMode("mobile-review")}
+      <AppChoicePage
+        userName={userName}
+        onSelectMobileReview={() => setAppMode("mobile-review")}
+        onSelectDesktop={() => setAppMode("dashboard")}
       />
     );
   }
@@ -114,7 +122,7 @@ export default function App() {
   if (appMode === "mobile-review") {
     return (
       <MobileReview
-        onExit={() => setAppMode("dashboard")}
+        onExit={() => setAppMode("choosing")}
         organizationId={currentOrg?.org_id}
       />
     );
@@ -175,6 +183,7 @@ export default function App() {
     // Reset local state
     setShowOrgPicker(false);
     setCurrentSurface("mission-control");
+    setAppMode("choosing");
   };
 
   const handleGraphToggle = () => {

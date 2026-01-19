@@ -2,15 +2,13 @@ import { useState } from 'react'
 import { useAuth } from '../../../contexts/AuthContext'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
-import { Loader2, Smartphone, Monitor } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 
 interface LoginPageProps {
   onSwitchToSignup: () => void
-  onMobileReviewMode?: () => void
 }
 
-export function LoginPage({ onSwitchToSignup, onMobileReviewMode }: LoginPageProps) {
-  const [showAppChoice, setShowAppChoice] = useState(false)
+export function LoginPage({ onSwitchToSignup }: LoginPageProps) {
   const { signIn, signInWithGoogle, signInWithGitHub, resetPassword } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -27,12 +25,8 @@ export function LoginPage({ onSwitchToSignup, onMobileReviewMode }: LoginPagePro
 
     if (error) {
       setError(error.message)
-      setLoading(false)
-    } else {
-      // Show app choice after successful login
-      setShowAppChoice(true)
-      setLoading(false)
     }
+    setLoading(false)
   }
 
   const handleGoogleLogin = async () => {
@@ -43,7 +37,6 @@ export function LoginPage({ onSwitchToSignup, onMobileReviewMode }: LoginPagePro
       setError(error.message)
       setLoading(false)
     }
-    // OAuth redirects, so no app choice needed here
   }
 
   const handleGitHubLogin = async () => {
@@ -54,7 +47,6 @@ export function LoginPage({ onSwitchToSignup, onMobileReviewMode }: LoginPagePro
       setError(error.message)
       setLoading(false)
     }
-    // OAuth redirects, so no app choice needed here
   }
 
   const handleForgotPassword = async () => {
@@ -73,60 +65,6 @@ export function LoginPage({ onSwitchToSignup, onMobileReviewMode }: LoginPagePro
       setResetSent(true)
     }
     setLoading(false)
-  }
-
-  // App choice screen after successful login
-  if (showAppChoice) {
-    return (
-      <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4">
-        <div className="w-full max-w-md p-8 bg-[#1e293b] border border-[#334155] rounded-lg">
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-[#e2e8f0]">Welcome back!</h1>
-            <p className="text-[#94a3b8] mt-2">Choose how you want to work</p>
-          </div>
-
-          <div className="space-y-4">
-            {/* Mobile Review Option */}
-            {onMobileReviewMode && (
-              <button
-                onClick={onMobileReviewMode}
-                className="w-full p-6 bg-[#334155]/50 hover:bg-[#334155] border border-[#334155] rounded-lg text-left transition-all group"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="p-3 rounded-lg bg-[#06b6d4]/20 text-[#06b6d4] group-hover:bg-[#06b6d4]/30">
-                    <Smartphone className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-[#e2e8f0] mb-1">Mobile Review</h3>
-                    <p className="text-sm text-[#94a3b8]">
-                      Quick knowledge review on your phone. Swipe through extractions, verify with taps.
-                    </p>
-                  </div>
-                </div>
-              </button>
-            )}
-
-            {/* Full Dashboard Option */}
-            <button
-              onClick={() => setShowAppChoice(false)}
-              className="w-full p-6 bg-[#334155]/50 hover:bg-[#334155] border border-[#334155] rounded-lg text-left transition-all group"
-            >
-              <div className="flex items-start gap-4">
-                <div className="p-3 rounded-lg bg-[#475569]/50 text-[#94a3b8] group-hover:bg-[#475569]">
-                  <Monitor className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-[#e2e8f0] mb-1">Full Dashboard</h3>
-                  <p className="text-sm text-[#94a3b8]">
-                    Mission Control, Library, Admin tools. Best on desktop.
-                  </p>
-                </div>
-              </div>
-            </button>
-          </div>
-        </div>
-      </div>
-    )
   }
 
   return (
