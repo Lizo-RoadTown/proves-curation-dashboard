@@ -18,12 +18,13 @@ import { useSources } from "@/hooks/useSources";
 import { useCurrentOrganization } from "@/hooks/useCurrentOrganization";
 import { ExtractionDetail } from "@/app/components/ExtractionDetail";
 import { EngineerReview } from "@/app/components/EngineerReview";
+import { AgentOversight } from "@/app/components/AgentOversight";
 import { SourcesSection } from "./SourcesSection";
 import { IngestionSection } from "./IngestionSection";
 import { TeamDashboard } from "./TeamDashboard";
 import type { ReviewExtractionDTO, RejectionCategory } from "@/types/review";
 
-type AdminSection = "dashboard" | "review" | "sources" | "ingestion" | "health" | "policy";
+type AdminSection = "dashboard" | "review" | "sources" | "ingestion" | "health" | "policy" | "agents";
 
 export function AdminView() {
   const [activeSection, setActiveSection] = useState<AdminSection>("dashboard");
@@ -202,6 +203,7 @@ export function AdminView() {
           onNavigateToIngestion={() => setActiveSection("ingestion")}
           onNavigateToHealth={() => setActiveSection("health")}
           onNavigateToPolicy={() => setActiveSection("policy")}
+          onNavigateToAgents={() => setActiveSection("agents")}
         />
       )}
 
@@ -441,6 +443,13 @@ export function AdminView() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {activeSection === "agents" && (
+        <div className="p-6">
+          {renderBackButton()}
+          <AgentOversight />
         </div>
       )}
     </div>

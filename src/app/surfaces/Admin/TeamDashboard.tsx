@@ -43,6 +43,7 @@ interface TeamDashboardProps {
   onNavigateToIngestion?: () => void;
   onNavigateToHealth?: () => void;
   onNavigateToPolicy?: () => void;
+  onNavigateToAgents?: () => void;
 }
 
 export function TeamDashboard({
@@ -60,6 +61,7 @@ export function TeamDashboard({
   onNavigateToIngestion,
   onNavigateToHealth,
   onNavigateToPolicy,
+  onNavigateToAgents,
 }: TeamDashboardProps) {
   // Use real stats from Supabase if available, otherwise fallback
   const stats = {
@@ -230,7 +232,16 @@ export function TeamDashboard({
       {/* Admin Tools */}
       <div className="bg-slate-800/50 border border-slate-700 rounded p-4">
         <h2 className="text-sm font-medium text-slate-200 mb-4">System Controls</h2>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-4">
+          {onNavigateToAgents && (
+            <button
+              onClick={onNavigateToAgents}
+              className="p-4 bg-slate-900/50 border border-slate-700 rounded hover:bg-slate-900 hover:border-slate-600 transition-colors text-left"
+            >
+              <p className="text-sm font-medium text-slate-200">Agent Oversight</p>
+              <p className="text-xs text-slate-500">Trust levels & proposals</p>
+            </button>
+          )}
           {onNavigateToIngestion && (
             <button
               onClick={onNavigateToIngestion}
